@@ -3,62 +3,176 @@
 
 int BookshelfParser::ReadFile(string file, PlaceDB &db)
 {
-    cout << "Reading AUX file: " << file << endl;
+	cout << "Reading AUX file: " << file << endl;
 
-    ifstream out(file);
-    if (!out)
-    {
-        cout << "\tCannot open aux file\n";
-        exit(-1);
-    }
+	ifstream out(file);
+	if (!out)
+	{
+		cout << "\tCannot open aux file\n";
+		exit(-1);
+	}
 
-    char tmp[10000];
-    out.getline(tmp, 10000);
+	char tmp[10000];
+	out.getline(tmp, 10000);
 
-    char tmp1[500];
-    char tmp2[500];
-    char file_nodes[500];
-    char file_nets[500];
-    char file_wts[500];
-    char file_pl[500];
-    char file_scl[500];
+	char tmp1[500];
+	char tmp2[500];
+	char file_nodes[500];
+	char file_nets[500];
+	char file_wts[500];
+	char file_pl[500];
+	char file_scl[500];
 
-    sscanf(tmp, "%s %s %s %s %s %s %s",
-           tmp1, tmp2, file_nodes, file_nets, file_wts, file_pl, file_scl);
+	sscanf(tmp, "%s %s %s %s %s %s %s",
+		   tmp1, tmp2, file_nodes, file_nets, file_wts, file_pl, file_scl);
 
-    printf("\t\t%s %s %s %s %s\n", file_nodes, file_nets, file_wts, file_pl, file_scl);
+	printf("\t\t%s %s %s %s %s\n", file_nodes, file_nets, file_wts, file_pl, file_scl);
 
-    // Read SCL first to know the row height.
-    ReadSCLFile(file_scl, db); // read core-row information
-    ReadNodesFile(file_nodes, db); // blocks & cell width/height
-    printf("Create block name map...\n");
-    db.CreateModuleNameMap();
-    ReadNetsFile(file_nets, db); // read net file
-    ReadPLFile(file_pl, db);     // initial module locations
-    db.ClearModuleNameMap();
-    return 0;
+	// Read SCL first to know the row height.
+	ReadSCLFile(file_scl, db);	   // read core-row information
+	ReadNodesFile(file_nodes, db); // blocks & cell width/height
+	ReadNetsFile(file_nets, db);   // read net file
+	ReadPLFile(file_pl, db);	   // initial module locations
+	return 0;
+}
+
+int BookshelfParser::ReadSCLFile(string file, PlaceDB &db)
+{
+	// In this version, we don't care the pre-placed location.
+	// Read Numrows, Height, and Numsites only.
+
+	string path;
+	gArg.GetString("path", &path);
+	path += file;
+	ifstream in(path.c_str());
+	if (!in)
+	{
+		cerr << "Cannot open .scl file: " << file << endl;
+		exit(-1);
+	}
+
+	int nRows, height;
+	nRows = height = -1;
+
+	int lineNumber = 0;
+
+	// check file format string
+	char tmp[10000];
+	in.getline(tmp, 10000);
+	lineNumber++;
+
+#if 0
+	if( strcmp( "UCLA scl 1.0", tmp ) != 0 )
+	{
+		cerr << "SCL file header error (UCLA scl 1.0)\n";
+		exit(-1);
+	}
+#endif
+
+	char tmp1[500], tmp2[500], tmp3[500], tmp4[500], tmp5[500], tmp6[500];
+
+	vector<SiteRow> &vSites = db.dbSiteRows;
+	double SiteWidth = 1; // default value is 1 (2005/2/14 donnie)
+	ORIENT orient = OR_N; // 2006-04-23 (donnie)
+	while (in.getline(tmp, 10000))
+	{
+		tmp1[0] = tmp2[0] = tmp3[0] = tmp4[0] = tmp5[0] = tmp6[0] = '\0';
+		sscanf(tmp, "%s %s %s %s %s %s", tmp1, tmp2, tmp3, tmp4, tmp5, tmp6);
+
+		if (strcmp(tmp1, "Numrows") == 0 || strcmp(tmp1, "NumRows") == 0)
+		{
+			nRows = atoi(tmp3);
+			////test code
+			// printf("get numrows %f\n", atoi( tmp3 ) );
+			////@test code
+		}
+		else if (strcmp(tmp1, "CoreRow") == 0 && strcmp(tmp2, "Horizontal") == 0) // start of a row
+		{
+			vSites.push_back(SiteRow());
+			////test code
+			// printf("get corerow, site size: %d\n", vSites.size() );
+			////@test code
+		}
+		else if (strcmp(tmp1, "Coordinate") == 0)
+		{
+			vSites.back().bottom = atof(tmp3);
+			////test code
+			// printf("get coordinate %f\n", atof( tmp3 ) );
+			////@test code
+		}
+		else if (strcmp(tmp1, "Height") == 0)
+		{
+			vSites.back().height = atof(tmp3);
+			height = atof(tmp3);
+			////test code
+			// printf("get height %f\n", atof( tmp3 ) );
+			////@test code
+		}
+		else if (strcmp(tmp1, "Sitewidth") == 0) //! site spacing equals to site width in bookshelf format
+		{
+			SiteWidth = atof(tmp3);
+			vSites.back().step = atof(tmp3); // step equals sitewidth in bookshelf format
+											 ////test code
+											 // printf("get sitewidth %f\n", atof( tmp3 ) );
+											 ////@test code
+		}
+		else if (strcmp(tmp4, "Numsites") == 0 || strcmp(tmp4, "NumSites") == 0)
+		{
+			double subOrigin = atof(tmp3);
+			double numSites = atof(tmp6);
+			// vSites.back().m_interval.push_back(atof(tmp3));
+			// vSites.back().m_interval.push_back((atof(tmp6) * SiteWidth) + atof(tmp3));//! tmp3: subrow origin!
+			vSites.back().start = POS_2D(subOrigin, vSites.back().bottom);
+			vSites.back().end = POS_2D((numSites * SiteWidth) + subOrigin, vSites.back().bottom);
+			// printf("get numsites: %f %f\n", atof(tmp3), ( atof( tmp6 )*SiteWidth ) + atof( tmp3 ) );
+		}
+		else if (strcmp(tmp1, "Siteorient") == 0 || strcmp(tmp1, "SiteOrient") == 0) // donnie 2006-04-23
+		{
+			if (strcmp(tmp3, "S") == 0 || strcmp(tmp3, "FS") == 0)
+				orient = OR_S;
+			else
+				orient = OR_N;
+			vSites.back().orientation = orient;
+		}
+	}
+
+	// cout << "     Numrows: " << nRows << "\n";
+	// cout << "      Height: " << height << "\n";
+	// cout << "    Numsites: " << nSites << "\n";
+	// cout << " Core region: (" << left << "," << bottom << ")-("
+	//	 << left+nSites << "," << bottom + nRows * height << ")\n";
+
+	db.commonRowHeight = vSites.back().height; //!
+	db.setCoreRegion();
+
+	// Romove the sites occupied by the fixed module
+
+	// included in CPlaceDB
+	//@Romove the sites occupied by the fixed module
+
+	return 0;
 }
 
 int BookshelfParser::ReadNodesFile(string file, PlaceDB &db)
 {
-    string path;
-	gArg.GetString( "path", &path );
+	string path;
+	gArg.GetString("path", &path);
 	path += file;
-	ifstream in( path.c_str() );
-	if( !in )
+	ifstream in(path.c_str());
+	if (!in)
 	{
 		cerr << "\tCannot open nodes file: " << file << endl;
 		exit(-1);
 	}
-	
-	int nNodes, nTerminals;
-	nNodes = nTerminals = -1;
+
+	int nModules, nNodes, nTerminals;
+	nModules = nNodes = nTerminals = -1;
 
 	int lineNumber = 0;
 
 	// check file format string
 	char tmp[10000], tmp2[10000], tmp3[10000];
-	in.getline( tmp, 10000 );
+	in.getline(tmp, 10000);
 	lineNumber++;
 
 #if 0
@@ -71,78 +185,66 @@ int BookshelfParser::ReadNodesFile(string file, PlaceDB &db)
 
 	// check file header
 	int checkFormat = 0;
-	while( in.getline( tmp, 10000 ) )
+	while (in.getline(tmp, 10000))
 	{
 		lineNumber++;
 
-		//cout << tmp << endl;
-		if( tmp[0] == '#' )		continue;
-		if( strncmp( "NumNodes", tmp, 8 ) == 0 )
+		// cout << tmp << endl;
+		if (tmp[0] == '#')
+			continue;
+		if (strncmp("NumNodes", tmp, 8) == 0)
 		{
-			char* pNumber = strrchr( tmp, ':' );
-			nNodes = atoi( pNumber+1 );
-
-			// 2005-12-18 (allocate mem) #donnie
-			db.ReserveModuleMemory( nNodes );
-			
+			char *pNumber = strrchr(tmp, ':');
+			nNodes = atoi(pNumber + 1);
+			db.allocateNodeMemory(nNodes);
 			checkFormat++;
 		}
-		else if( strncmp( "NumTerminals", tmp, 12 ) == 0 )
+		else if (strncmp("NumTerminals", tmp, 12) == 0)
 		{
-			char* pNumber = strrchr( tmp, ':' );
-			nTerminals = atoi( pNumber+1 );
+			char *pNumber = strrchr(tmp, ':');
+			nTerminals = atoi(pNumber + 1);
+			db.allocateTerminalMemory(nTerminals);
 			checkFormat++;
 		}
 
-		if( checkFormat == 2 )
+		if (checkFormat == 2)
 			break;
-
 	}
+	nModules = nTerminals + nNodes;
 
-	if( checkFormat != 2 )
+	if (checkFormat != 2)
 	{
 		cerr << "** Block file header error (miss NumNodes or NumTerminals)\n";
 	}
 
 	cout << "     NumNodes: " << nNodes;
-	if( nNodes > 1000 )
+	if (nNodes > 1000)
 
-	    cout << " (= " << nNodes / 1000 << "k)";
+		cout << " (= " << nNodes / 1000 << "k)";
 	cout << endl;
 	cout << "    Terminals: " << nTerminals << endl;
 
 	// Read modules and terminals.
 	char name[10000];
 	char type[10000];
-	double w, h;
-    //p double oldH = -1;
-	int nReadModules = 0;
-	int nReadTerminals = 0;
-	while( in.getline( tmp, 10000 ) )
+	double width, height;
+	int nodeIndex = 0;
+	int terminalIndex = 0;
+	int index;
+	Module *curModule = NULL;
+	while (in.getline(tmp, 10000))
 	{
+
 		lineNumber++;
 
-		if( tmp[0] == '\0' )
+		if (tmp[0] == '\0')
 			continue;
 		type[0] = '\0';
-		sscanf( tmp, "%s %s %s %s",
-					name, tmp2, tmp3, type );
+		sscanf(tmp, "%s %s %s %s",
+			   name, tmp2, tmp3, type);
 
-		// 2005-12-05 (FARADAY testcases)
-		if( strcmp( tmp2, "terminal" ) == 0 )
-		{
-		    nReadTerminals++;
-		    db.AddModule( name, 1, 1, true );
-		    continue;
-		}
-
-		w = atof( tmp2 );
-		h = atof( tmp3 );
-
-		/*if( h > db.m_rowHeight * 10 )
-		{
-		    printf( "    Large MACRO %s\n", name );
-		}*/
+		width = atof(tmp2);
+		height = atof(tmp3);
 
 #if 0
         if( oldH != -1 && h != oldH && strcmp( type, "terminal" ) != 0)
@@ -153,63 +255,204 @@ int BookshelfParser::ReadNodesFile(string file, PlaceDB &db)
         oldH = h;
 #endif
 
-		if( strcmp( type, "terminal" ) == 0 )
+		if (strcmp(type, "terminal") == 0)
 		{
-			nReadTerminals++;
-            db.addModule( name, w, h, true );
+			index = terminalIndex;
+			curModule = db.addTerminal(terminalIndex, name, width, height, true, false);
+			terminalIndex++;
 		}
-		else if( strcmp( type, "terminal_NI" ) == 0 ) // (frank) 2022-05-13 consider terminal_NI
+		else if (strcmp(type, "terminal_NI") == 0) // (frank) 2022-05-13 consider terminal_NI
 		{
-			nReadTerminals++;
-			db.addModule( name, w, h, true, true );
+			index = terminalIndex;
+			curModule = db.addTerminal(terminalIndex, name, width, height, true, true);
+			terminalIndex++;
 		}
-		else 
+		else
 		{
-			nReadModules++;
-			db.addModule( name, w, h, false );
+			index = nodeIndex;
+			curModule = db.addNode(nodeIndex, name, width, height);
+			nodeIndex++;
 		}
-
-		if( nNodes > stepNode && nReadModules % stepNode == 0 )
-		    printf( "#%d...\n", nReadModules );
-		
+		db.moduleMap[name] = curModule; // recorded in map
 	}
 
 	// check if modules number and terminal number match
-	if( nReadModules+nReadTerminals != nNodes )
+	if (terminalIndex + nodeIndex != nModules)
 	{
-		cerr << "Error: There are " << nReadModules << " modules in the file\n";
+		cerr << "Error: There are " << nodeIndex << " modules in the file\n";
 		exit(-1);
 	}
-	if( nReadTerminals != nTerminals )
+	if (terminalIndex != nTerminals)
 	{
-		cerr << "Error: There are " << nReadTerminals << " terminals in the file\n";
+		cerr << "Error: There are " << terminalIndex << " terminals in the file\n";
 		exit(-1);
 	}
 
-	db.m_nModules = nNodes + nTerminals;
+	db.moduleCount = nNodes + nTerminals;
+	return 0;
+}
 
-    // 2005/03/11
-    db.m_modules.resize( db.m_modules.size() );
+int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
+{
+	string path;
+	gArg.GetString("path", &path);
+	path += file;
+	ifstream in(path.c_str());
+	if (!in)
+	{
+		cerr << "Cannot open net file: " << file << endl;
+		exit(-1);
+	}
 
+	int nNets, nPins;
+	nNets = nPins = -1;
 
-    // TEST: memory upper bound
-    //int *ptr;
-    //while( true )
-    //{
-    //    ptr = new int [5000000];
+	int lineNumber = 0;
 
-    //    for( int i=0; i<5000000; i++ )
-    //        ptr[i] = i;
+	// check file format string
+	char tmp[10000];
+	in.getline(tmp, 10000);
+	lineNumber++;
 
-    //    cout << "*";
-    //    flush(cout);
-    //    sleep(1);
-    //}
+#if 0
+	if( strcmp( "UCLA nets 1.0", tmp ) != 0 )
+	{
+		cerr << "Nets file header error (UCLA nets 1.0)\n";
+		exit(-1);
+	}
+#endif
 
-	// === debug ===
-	//db.PrintModules();
-	//db.PrintTerminals();
-	// =============
+	// check file header
+	int checkFormat = 0;
+	while (in.getline(tmp, 10000))
+	{
+		lineNumber++;
 
+		// cout << tmp << endl;
+		if (tmp[0] == '#')
+			continue;
+		if (strncmp("NumNets", tmp, 7) == 0)
+		{
+			char *pNumber = strrchr(tmp, ':');
+			nNets = atoi(pNumber + 1);
+			db.allocateNetMemory(nNets);
+			checkFormat++;
+		}
+		else if (strncmp("NumPins", tmp, 7) == 0)
+		{
+			char *pNumber = strrchr(tmp, ':');
+			nPins = atoi(pNumber + 1);
+			db.allocatePinMemory(nPins);
+			checkFormat++;
+		}
+
+		if (checkFormat == 2)
+			break;
+	}
+
+	if (checkFormat != 2)
+	{
+		cerr << "** Net file header error\n";
+	}
+
+	cout << "         Nets: " << nNets << endl;
+	cout << "         Pins: " << nPins << endl;
+
+	char tmp1[2000], tmp2[2000], tmp3[2000], tmp4[2000];
+	int maxDegree = 0;
+	int degree;
+	int pinIndex = 0;
+	int netIndex = 0;
+	while (in.getline(tmp, 10000))
+	{
+		lineNumber++;
+
+		if (tmp[0] == '\0')
+			continue;
+
+		sscanf(tmp, "%s %s %d", tmp1, tmp2, &degree);
+		if (strcmp(tmp1, "NetDegree") != 0 || degree < 0)
+		{
+			cerr << "Syntax unsupport in line " << lineNumber << ": "
+				 << tmp1 << endl;
+			return 01;
+		}
+		Net* net=new Net(netIndex);// default constructer
+		Module* module;
+		int vCount;
+		int pinId;
+		double xOffset, yOffset;
+		if (degree > maxDegree)
+			maxDegree = degree;
+
+		net->allocateMemoryForPin(degree);
+
+		pinIndex += degree; // will read "degree" pins
+
+		for (int j = 0; j < degree; j++)
+		{
+			in.getline(tmp, 10000);
+			lineNumber++;
+			tmp3[0] = '\0';
+			tmp4[0] = '\0';
+			vCount = sscanf(tmp, "%s %s : %s %s", tmp1, tmp2, tmp3, tmp4);
+
+			if (tmp3[0] != '\0')
+				xOffset = atof(tmp3);
+			else
+				xOffset = 0;
+			if (tmp4[0] != '\0')
+				yOffset = atof(tmp4);
+			else
+				yOffset = 0;
+			
+			module = db.getModuleFromName(tmp1);
+			pinId = db.addPin(module, net, xOffset, yOffset);
+			module->addPin(db.dbPins[pinId]);
+			net->addPin(db.dbPins[pinId]);
+
+			// 2005/2/2 (donnie)
+			// TODO: Remove duplicate netsIds
+			// 2007/3/9 (indark)
+			// remove duplicated netsIds
+			//? is this necessary?
+			// bool found = false;
+			// for (unsigned int z = 0; z < db.m_modules[moduleId].m_netsId.size(); z++)
+			// {
+			// 	if (nReadNets == db.m_modules[moduleId].m_netsId[z])
+			// 	{
+			// 		found = true;
+			// 		break;
+			// 	}
+			// }
+			// if (!found)
+			// 	db.m_modules[moduleId].m_netsId.push_back(nReadNets);
+		}
+		db.addNet(net);
+		netIndex++;
+
+		// if (nReadNets % stepNet == 0 && nNets > stepNet)
+		// 	printf("#%d...\n", nReadNets);
+	}
+
+	// TODO: if nReadNets > nNets may have memory problem.
+	// check if modules number and terminal number match
+	if (nNets != netIndex)
+	{
+		cerr << "Error: There are " << netIndex << " nets in the file\n";
+		exit(-1);
+	}
+	if (pinIndex != nPins)
+	{
+		cerr << "Error: There are " << pinIndex << " pins in the file\n";
+		exit(-1);
+	}
+
+	db.pinCount = nPins;
+	db.netCount = nNets;
+
+#if 1
+	cout << "Max net degree= " << maxDegree << endl;
+#endif
 	return 0;
 }

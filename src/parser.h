@@ -9,12 +9,17 @@ public:
     int ReadPLFile(string file, PlaceDB &db);
 
 private:
+    int ReadSCLFile(string file, PlaceDB &db);
     int ReadNodesFile(string file, PlaceDB &db);
     int ReadNetsFile(string file, PlaceDB &db);
-    int ReadSCLFile(string file, PlaceDB &db);
 
     // int stepNode;
     // int stepNet;
+};
+
+class LEFDEFParser
+{
+    // maybe in the future...
 };
 
 #endif
