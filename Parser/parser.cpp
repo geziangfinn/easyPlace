@@ -195,34 +195,35 @@ int BookshelfParser::ReadNodesFile(string file, PlaceDB &db)
 		if (strncmp("NumNodes", tmp, 8) == 0)
 		{
 			char *pNumber = strrchr(tmp, ':');
-			nNodes = atoi(pNumber + 1);
-			db.allocateNodeMemory(nNodes);
+			nModules = atoi(pNumber + 1);
 			checkFormat++;
 		}
 		else if (strncmp("NumTerminals", tmp, 12) == 0)
 		{
 			char *pNumber = strrchr(tmp, ':');
 			nTerminals = atoi(pNumber + 1);
-			db.allocateTerminalMemory(nTerminals);
 			checkFormat++;
 		}
 
 		if (checkFormat == 2)
 			break;
 	}
-	nModules = nTerminals + nNodes;
+	nNodes =nModules-nTerminals;
 
 	if (checkFormat != 2)
 	{
 		cerr << "** Block file header error (miss NumNodes or NumTerminals)\n";
 	}
-
-	cout << "     NumNodes: " << nNodes;
+	cout << "    NumModules: " << nModules<<endl;
+	cout << "    NumNodes: " << nNodes;
 	if (nNodes > 1000)
 
-		cout << " (= " << nNodes / 1000 << "k)";
+	cout << " (= " << nNodes / 1000 << "k)";
 	cout << endl;
 	cout << "    Terminals: " << nTerminals << endl;
+
+	db.allocateNodeMemory(nNodes);
+	db.allocateTerminalMemory(nTerminals);
 
 	// Read modules and terminals.
 	char name[10000];
@@ -279,7 +280,7 @@ int BookshelfParser::ReadNodesFile(string file, PlaceDB &db)
 	// check if modules number and terminal number match
 	if (terminalIndex + nodeIndex != nModules)
 	{
-		cerr << "Error: There are " << nodeIndex << " modules in the file\n";
+		cerr << "Error: There are " << terminalIndex + nodeIndex << " modules in the file\n";
 		exit(-1);
 	}
 	if (terminalIndex != nTerminals)
@@ -377,8 +378,8 @@ int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
 				 << tmp1 << endl;
 			return 01;
 		}
-		Net* net=new Net(netIndex);// default constructer
-		Module* module;
+		Net *net = new Net(netIndex); // default constructer
+		Module *module;
 		int vCount;
 		int pinId;
 		double xOffset, yOffset;
@@ -405,7 +406,7 @@ int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
 				yOffset = atof(tmp4);
 			else
 				yOffset = 0;
-			
+
 			module = db.getModuleFromName(tmp1);
 			pinId = db.addPin(module, net, xOffset, yOffset);
 			module->addPin(db.dbPins[pinId]);
@@ -454,5 +455,97 @@ int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
 #if 1
 	cout << "Max net degree= " << maxDegree << endl;
 #endif
+	return 0;
+}
+
+int BookshelfParser::ReadPLFile(string file, PlaceDB &db)
+{
+	cout << "Initialize position with the file: " << file << "\n";
+	string path;
+	gArg.GetString("path", &path);
+	path += file;
+	ifstream in(path.c_str());
+	if (!in)
+	{
+		cerr << "\tCannot open PL file: " << file << endl;
+		exit(-1);
+	}
+
+	int lineNumber = 0;
+
+	// check file format string
+	char tmp[10000];
+	in.getline(tmp, 10000);
+	lineNumber++;
+	// if( strcmp( "UCLA pl 1.0", tmp ) != 0 )
+	//{
+	//	cerr << "PL file header format error (UCLA pl 1.0)\n";
+	//	return -1;
+	// }
+
+	char name[10000];
+	char orientation[1000];
+	float x, y;
+	while (in.getline(tmp, 10000))
+	{
+		lineNumber++;
+
+		// cout << tmp << endl;
+		if (tmp[0] == '#')
+			continue;
+		if (tmp[0] == '\0')
+			continue;
+
+		for (int i = 0; i < (int)strlen(tmp); i++)
+		{
+			if (tmp[i] == '(')
+				tmp[i] = ' ';
+			if (tmp[i] == ',')
+				tmp[i] = ' ';
+			if (tmp[i] == ')')
+				tmp[i] = ' ';
+			if (tmp[i] == ':')
+				tmp[i] = ' ';
+			if (tmp[i] == '=')
+				tmp[i] = ' ';
+			if (tmp[i] == '\r')
+				tmp[i] = ' ';
+		}
+
+		name[0] = '\0';
+		int ret = sscanf(tmp, "%s %f %f %s ", name, &x, &y, orientation);
+
+		if (ret <= 0)
+			continue;
+
+		if (ret != 4 && ret != 3)
+		{
+			// cerr << "Error in the PL file: <" << tmp << ">\n";
+			// exit(-1);
+			printf("Syntax (may) error in line %d. Please check. (ret = %d)\n",
+				   lineNumber, ret);
+			continue; // skip this line...
+		}
+
+		if (ret == 3)
+		{
+			// printf( "Block %s does not has orientation.\n", name );
+			orientation[0] = 'N';
+			orientation[1] = '\0';
+		}
+
+		Module *module = db.getModuleFromName(name);
+		// assert(module);
+		if (!module)
+		{
+			cerr << "Error: module name " << name << " not found in line "
+				 << lineNumber << " file: " << file << endl;
+			exit(-1);
+		}
+
+		db.setModuleLocation_2D(module, x, y);
+		db.setModuleOrientation(module, orientInt(orientation));
+	}
+
 	return 0;
 }

@@ -25,7 +25,31 @@ enum ORIENT
     //         0    1    2    3    4     5     6     7
     //         |    -    |    -    |     -     |     -
 };
-
+inline int orientInt(char* c)// transform orientation string to int (enum ORIENT)
+{
+    assert( strlen(c) <= 2 );
+    if( c[0] == 'F' )
+    {
+	switch( c[1] )
+	{
+	    case 'N': return 4;
+	    case 'W': return 5;
+	    case 'S': return 6;
+	    case 'E': return 7;
+	}
+    }
+    else
+    {
+	switch( c[0] )
+	{
+	    case 'N': return 0;
+	    case 'W': return 1;
+	    case 'S': return 2;
+	    case 'E': return 3;
+	}
+    }
+    return 0;	// Use "N" if any problem occurs.
+}
 struct POS_2D // POS means postition, POS_2D can be used to store coordinates, offsets
 {
     float x;
@@ -89,13 +113,13 @@ struct VECTOR_3D
         return os;
     }
 };
-float float_mul(float a, float b) // perform float number multiplication
+inline float float_mul(float a, float b) // perform float number multiplication
 {
     float c = a * b;
     return c;
 }
 
-bool float_greater(float a, float b)// return true if a > b
+inline bool float_greater(float a, float b)// return true if a > b
 {
     return a-b>EPS;
 }

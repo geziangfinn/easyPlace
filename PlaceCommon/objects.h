@@ -5,6 +5,14 @@ const int PIN_DIRECTION_OUT = 0;
 const int PIN_DIRECTION_IN = 1;
 const int PIN_DIRECTION_UNDEFINED = -1;
 // todo: use maps for indexing by name
+class Module;
+class SiteRow;
+class Row;
+class Pin;
+class Net;
+class Tier;
+class CRect;
+
 class Net
 {
 public:
@@ -69,6 +77,7 @@ public:
         width = width;
         height = height;
         area = width * height;
+        isMacro=false;
         isFixed = isFixed;
         isNI = isNI; // 2022-05-13 (frank)
         assert(area >= 0);
@@ -120,6 +129,8 @@ public:
     float getY() { return coor.y; }
     float getArea() { return area; }
     short int getOrientation() { return orientation; }
+    void setLocation(float,float, float=0);
+    void setOrientation(int);
 };
 
 class Row
@@ -156,6 +167,7 @@ public:
         step = 0;
         start.SetZero();
         end.SetZero();
+        orientation=OR_N;
     }
 
     SiteRow(double _bottom, double _height, double _step) : bottom(_bottom),
@@ -194,7 +206,7 @@ public:
         //     if (*ite <= x && *(ite + 1) >= x)
         //         return true;
         // }
-        // return false;
+        return false;
     }
     friend inline std::ostream &operator<<(std::ostream &os, const SiteRow &row)
     {

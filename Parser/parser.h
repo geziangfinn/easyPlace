@@ -13,8 +13,6 @@ private:
     int ReadNodesFile(string file, PlaceDB &db);
     int ReadNetsFile(string file, PlaceDB &db);
 
-    // int stepNode;
-    // int stepNet;
 };
 
 class LEFDEFParser

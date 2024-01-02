@@ -1,4 +1,5 @@
 #include "placedb.h"
+#include "global.h"
 
 void PlaceDB::setCoreRegion()
 {
@@ -37,13 +38,15 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
     Module *node = new Module(index, name, width, height);
     assert(index<dbNodes.size());
     assert(commonRowHeight > EPS); //! potential float precision problem!!
+    node->isMacro=false;
     if (float_greater(height, commonRowHeight))
     {
         node->isMacro = true;
     }
-    else
+    else if(float_greater(commonRowHeight,height))
     {
         printf("Cell %s height ERROR: %f\n", name, height);
+        exit(-1);
     }
     dbNodes[index] = node; // memory was previously allocated
     return node;
@@ -99,4 +102,14 @@ Module *PlaceDB::getModuleFromName(string name)
         return NULL;
     }
     return ite->second;
+}
+
+void PlaceDB::setModuleLocation_2D(Module * module, float x, float y)
+{
+    module->setLocation(x,y);
+}
+
+void PlaceDB::setModuleOrientation(Module * module, int orientation)
+{
+    module->setOrientation(orientation);
 }
