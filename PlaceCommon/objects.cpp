@@ -1,9 +1,8 @@
 #include <objects.h>
 
-void Net::addPin(Pin * pin)
+void Net::addPin(Pin *pin)
 {
     netPins.push_back(pin);
-    pin->setNet(this);
 }
 
 int Net::getPinCount()
@@ -16,49 +15,142 @@ void Net::allocateMemoryForPin(int n)
     netPins.reserve(n);
 }
 
+double Net::calcNetHPWL()
+{
+    double maxX = DOUBLE_MIN;
+    double minX = DOUBLE_MAX;
+    double maxY = DOUBLE_MIN;
+    double minY = DOUBLE_MAX;
+
+    double curX;
+    double curY;
+    double HPWL;
+    for (Pin *curPin : netPins)
+    {
+        curX = curPin->getAbsolutePos().x;
+        curY = curPin->getAbsolutePos().y;
+        minX = min(minX, curX);
+        maxX = max(maxX, curX);
+        minY = min(minY, curY);
+        maxY = max(maxY, curY);
+    }
+    HPWL = ((maxX - minX) + (maxY - minY));
+    return HPWL;
+}
+
+double Net::calcBoundPin()
+{
+    double maxX = DOUBLE_MIN;
+    double minX = DOUBLE_MAX;
+    double maxY = DOUBLE_MIN;
+    double minY = DOUBLE_MAX;
+
+    double curX;
+    double curY;
+    double HPWL;
+
+    for (Pin *curPin : netPins)
+    {
+        curX = curPin->getAbsolutePos().x;
+        curY = curPin->getAbsolutePos().y;
+
+        if (curX < minX)
+        {
+            minX = curX;
+            boundPinXmin = curPin;
+        }
+
+        if (curX > maxX)
+        {
+            maxX = curX;
+            boundPinXmax = curPin;
+        }
+
+        if (curY < minY)
+        {
+            minY = curY;
+            boundPinYmin = curPin;
+        }
+
+        if (curY > maxY)
+        {
+            maxY = curY;
+            boundPinYmax = curPin;
+        }
+    }
+
+    HPWL = ((maxX - minX) + (maxY - minY));
+    return HPWL;
+}
+
+void Net::clearBoundPins()
+{
+    boundPinXmax = NULL;
+    boundPinXmin = NULL;
+    boundPinYmax = NULL;
+    boundPinYmin = NULL;
+}
+
 POS_3D Pin::getAbsolutePos()
 {
     POS_3D absPos;
-    //module->calcCenter();//?
-    absPos.x = module->center.x + offset.x;
-    absPos.y = module->center.y + offset.y;
-    absPos.z = module->center.z;
+    // module->calcCenter();//?
+    absPos.x = module->getCenter().x + offset.x;
+    absPos.y = module->getCenter().y + offset.y;
+    absPos.z = module->getCenter().z;
     return absPos;
 }
 
 void Pin::setId(int index)
 {
-    idx=index;
+    idx = index;
 }
 
 void Pin::setNet(Net *_net)
 {
-    net=_net;
+    net = _net;
 }
 
 void Pin::setModule(Module *_module)
 {
-    module=_module;
+    module = _module;
 }
 
 void Pin::setDirection(int _direction)
 {
-    direction=_direction;
+    direction = _direction;
 }
 
-void Module::addPin(Pin * pin)
+void Module::addPin(Pin *_pin)
 {
-    modulePins.push_back(pin);
-}
-
-void Module::setLocation(float x, float y, float z)
-{
-    coor.x=x;
-    coor.y=y;
-    coor.z=z;
+    modulePins.push_back(_pin);
 }
 
 void Module::setOrientation(int _oritentation)
 {
-    orientation=_oritentation;
+    orientation = _oritentation;
 }
+
+//! need to check if coor is out side of the chip!!! but should be done in placeDB
+void Module::setLocation_2D(float _x, float _y, float _z = 0)
+{
+    coor.x = _x;
+    coor.y = _y;
+    coor.z = _z;
+    //update center
+    center.x = coor.x + (float)0.5 * width; //! be careful of float problems
+    center.y = coor.y + (float)0.5 * height;
+    center.z = coor.z;
+}
+
+void Module::setCenter_2D(float _x, float _y, float _z = 0)
+{
+    center.x=_x;
+    center.y=_y;
+    center.z=_z;
+    //update coor
+    coor.x = center.x - (float)0.5 * width; //! be careful of float problems
+    coor.y = center.y - (float)0.5 * height;
+    coor.z = center.z;
+}
+

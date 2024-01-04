@@ -47,6 +47,10 @@ public:
     void allocatePinMemory(int);
     Module *getModuleFromName(string);
     void setModuleLocation_2D(Module *, float, float);
+    void setModuleCenter_2D(Module *, float, float);
     void setModuleOrientation(Module *, int);
+    double calcHPWL();
+    double calcNetBoundPins();
+    void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 };
 #endif

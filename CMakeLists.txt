@@ -10,7 +10,6 @@ add_executable(
     PlaceCommon/arghandler.cpp
     PlaceCommon/objects.cpp
     PlaceDB/placedb.cpp
-    PlaceCommon/global.h
 )
 INCLUDE_DIRECTORIES (
 	${PROJECT_SOURCE_DIR}/Parser

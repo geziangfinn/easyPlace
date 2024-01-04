@@ -12,6 +12,7 @@ class Pin;
 class Net;
 class Tier;
 class CRect;
+class PlaceDB;
 
 class Net
 {
@@ -19,17 +20,28 @@ public:
     Net()
     {
         idx = 0;
+        clearBoundPins();
     }
     Net(int index)
     {
         idx = index;
         netPins.clear();
+        clearBoundPins();
     }
     int idx;
     vector<Pin *> netPins;
+    //! boundPin pointers, used for quadratic placement utilizing bound2bound net model
+    Pin *boundPinXmin;
+    Pin *boundPinXmax;
+    Pin *boundPinYmin;
+    Pin *boundPinYmax;
+
     void addPin(Pin *);
     int getPinCount();
     void allocateMemoryForPin(int);
+    double calcNetHPWL();
+    double calcBoundPin();
+    void clearBoundPins();
 };
 
 class Pin
@@ -43,7 +55,7 @@ public:
         offset.SetZero();
         direction = -1;
     }
-    Pin(Module* masterModule,Net* masterNet,float x, float y)
+    Pin(Module *masterModule, Net *masterNet, float x, float y)
         : direction(PIN_DIRECTION_UNDEFINED)
     {
         offset = POS_2D(x, y);
@@ -57,14 +69,15 @@ public:
     int direction; // 0 output  1 input  -1 not-define
     POS_3D getAbsolutePos();
     void setId(int);
-    void setNet(Net*);
-    void setModule(Module*);
+    void setNet(Net *);
+    void setModule(Module *);
     void setDirection(int);
 };
 
 class Module
 {
 public:
+    friend class PlaceDB;
     Module()
     {
         Init();
@@ -77,15 +90,13 @@ public:
         width = width;
         height = height;
         area = width * height;
-        isMacro=false;
+        isMacro = false;
         isFixed = isFixed;
         isNI = isNI; // 2022-05-13 (frank)
         assert(area >= 0);
     }
     int idx;
     Tier *tier;
-    POS_3D coor;   // coor for coordinate
-    POS_3D center; // coor of center, be aware that center should be recalculated every time the module is moved, or before HPWL calculation 
     string name;
     float width;
     float height;
@@ -110,27 +121,27 @@ public:
         isNI = false;
         tier = NULL;
     }
-    POS_3D calcCenter()
-    {
-        center.x = coor.x + (float)0.5 * width; //! be careful of float problems
-        center.y = coor.y + (float)0.5 * height;
-        return center;
-    }
     float calcArea()
     {
         area = float_mul(width, height);
         return area;
     }
-    void addPin(Pin*);
+    void addPin(Pin *);
     string getName() { return name; }
     float getWidth() { return width; }
     float getHeight() { return height; }
-    float getX() { return coor.x; }
-    float getY() { return coor.y; }
+    POS_3D getLocation() { return coor; }
+    POS_3D getCenter(){return center;}
     float getArea() { return area; }
     short int getOrientation() { return orientation; }
-    void setLocation(float,float, float=0);
     void setOrientation(int);
+
+private:
+    //! these 2 functions should only be called in db->setModuleCenter/Location!!!
+    POS_3D coor;   // coor for coordinate
+    POS_3D center; // coor of center, be aware that center should be recalculated every time the module is moved, or before HPWL calculation
+    void setLocation_2D(float, float, float = 0);
+    void setCenter_2D(float, float, float = 0);
 };
 
 class Row
@@ -167,7 +178,7 @@ public:
         step = 0;
         start.SetZero();
         end.SetZero();
-        orientation=OR_N;
+        orientation = OR_N;
     }
 
     SiteRow(double _bottom, double _height, double _step) : bottom(_bottom),

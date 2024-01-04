@@ -36,14 +36,14 @@ void PlaceDB::init_tiers()
 Module *PlaceDB::addNode(int index, string name, float width, float height)
 {
     Module *node = new Module(index, name, width, height);
-    assert(index<dbNodes.size());
+    assert(index < dbNodes.size());
     assert(commonRowHeight > EPS); //! potential float precision problem!!
-    node->isMacro=false;
+    node->isMacro = false;
     if (float_greater(height, commonRowHeight))
     {
         node->isMacro = true;
     }
-    else if(float_greater(commonRowHeight,height))
+    else if (float_greater(commonRowHeight, height))
     {
         printf("Cell %s height ERROR: %f\n", name, height);
         exit(-1);
@@ -55,20 +55,20 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
 Module *PlaceDB::addTerminal(int index, string name, float width, float height, bool isFixed, bool isNI)
 {
     Module *terminal = new Module(index, name, width, height, isFixed, isNI);
-    assert(index<dbTerminals.size());
+    assert(index < dbTerminals.size());
     dbTerminals[index] = terminal;
     return terminal;
 }
 
-void PlaceDB::addNet(Net * net)
+void PlaceDB::addNet(Net *net)
 {
-    assert(net->idx<dbNets.size());
+    assert(net->idx < dbNets.size());
     dbNets[net->idx] = net;
 }
 
-int PlaceDB::addPin(Module *masterModule, Net* masterNet, float xOffset, float yOffset)
+int PlaceDB::addPin(Module *masterModule, Net *masterNet, float xOffset, float yOffset)
 {
-    dbPins.push_back(new Pin(masterModule,masterNet, xOffset, yOffset));
+    dbPins.push_back(new Pin(masterModule, masterNet, xOffset, yOffset));
     int pinId = (int)dbPins.size() - 1;
     dbPins[pinId]->setId(pinId);
     return pinId;
@@ -91,7 +91,7 @@ void PlaceDB::allocateNetMemory(int n)
 
 void PlaceDB::allocatePinMemory(int n) // difference between resize and reserve: we can use index to index an element in a vector after allocation and before the element was instantiated
 {
-    dbPins.reserve(n);//! reserve instead of resize
+    dbPins.reserve(n); //! reserve instead of resize
 }
 
 Module *PlaceDB::getModuleFromName(string name)
@@ -104,12 +104,86 @@ Module *PlaceDB::getModuleFromName(string name)
     return ite->second;
 }
 
-void PlaceDB::setModuleLocation_2D(Module * module, float x, float y)
+void PlaceDB::setModuleLocation_2D(Module *module, float x, float y)
 {
-    module->setLocation(x,y);
+    //? use high precision comparison functions in global.h??
+    //  check if x,y are legal(inside the chip)
+    if (x < coreRegion.ll.x)
+    {
+        x = coreRegion.ll.x;
+    }
+    if (x + module->width > coreRegion.ur.x)
+    {
+        x = coreRegion.ur.x - module->width-EPS;
+    }
+    if (y < coreRegion.ll.y)
+    {
+        y = coreRegion.ll.y;
+    }
+    if (y + module->height > coreRegion.ur.y)
+    {
+        y = coreRegion.ur.y - module->height-EPS;
+    }
+    module->setLocation_2D(x, y);
 }
 
-void PlaceDB::setModuleOrientation(Module * module, int orientation)
+void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
+{
+    //? use high precision comparison functions in global.h??
+    // todo: check if x,y are legal(inside the chip)
+    if (x - 0.5 * module->width < coreRegion.ll.x)
+    {
+        //x = coreRegion.ll.x + 0.5 * module->width;
+        x = coreRegion.ll.x + 0.5 * module->width+EPS;
+    }
+    if (x + 0.5 * module->width > coreRegion.ur.x)
+    {
+        //x = coreRegion.ur.x - 0.5 * module->width;
+        x = coreRegion.ur.x - 0.5 * module->width-EPS;
+    }
+    if (y - 0.5 * module->height < coreRegion.ll.y)
+    {
+        //y = coreRegion.ll.y + 0.5 * module->height;
+        y = coreRegion.ll.y + 0.5 * module->height+EPS;
+    }
+    if (y + 0.5 * module->height > coreRegion.ur.y)
+    {
+        //y = coreRegion.ur.y - 0.5 * module->height;
+        y = coreRegion.ur.y - 0.5 * module->height-EPS;
+    }
+    module->setCenter_2D(x, y);
+}
+
+void PlaceDB::setModuleOrientation(Module *module, int orientation)
 {
     module->setOrientation(orientation);
+}
+
+double PlaceDB::calcHPWL() //! parallel this?
+{
+    double HPWL = 0;
+    for (Net *curNet : dbNets)
+    {
+        HPWL += curNet->calcNetHPWL();
+    }
+    return HPWL;
+}
+
+double PlaceDB::calcNetBoundPins()
+{
+    double HPWL = 0;
+    for (Net *curNet : dbNets)
+    {
+        HPWL += curNet->calcBoundPin();
+    }
+    return HPWL;
+}
+
+void PlaceDB::moveNodesCenterToCenter()
+{
+    POS_2D coreRegionCenter(0.5 * (coreRegion.ur.x + coreRegion.ll.x), 0.5 * (coreRegion.ur.y + coreRegion.ll.y));
+    for(Module* curModule: dbNodes)
+    {
+        setModuleCenter_2D(curModule,coreRegionCenter.x,coreRegionCenter.y);
+    }
 }

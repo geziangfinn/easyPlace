@@ -1,0 +1,215 @@
+#include "qplace.h"
+#include <Eigen/Core>
+#include <Eigen/SparseCore>
+#include <Eigen/IterativeLinearSolvers>
+#include <unsupported/Eigen/IterativeSolvers>
+using namespace Eigen;
+void QPPlacer::quadraticPlacement()
+{
+    // TESTING, one HPWL can be removed in the future
+    db->moveNodesCenterToCenter(); //!!!!!!
+
+    double HPWL = db->calcHPWL();
+
+    double HPWL2 = db->calcNetBoundPins();
+
+    assert(HPWL == HPWL2);
+
+    int nodeCount = db->dbNodes.size();
+    int maxIterationNumber = 30;
+    float xError, yError;
+    float target_error = 0.000001;
+
+    cout << "INFO:  The Initial HPWL is " << HPWL << endl;
+    cout << "INFO:  The Initial HPWL is " << nodeCount << endl; //! matrix size: only nodes(movable modules)
+
+    setNbThreads(8); //! a parameter(numThreads) fixed here
+
+    // BCGSTAB settings
+    SMatrix X_A(nodeCount, nodeCount), Y_A(nodeCount, nodeCount);            // A for Ax=b
+    VectorXf X_x(nodeCount), Y_x(nodeCount), X_b(nodeCount), Y_b(nodeCount); // x and b for Ax=b
+
+    for (int i = 0;; i++)
+    {
+
+        double qp_start = seconds();
+        createSparseMatrix(X_A, Y_A, X_x, Y_x, X_b, Y_b);
+
+        BiCGSTAB<SMatrix, IdentityPreconditioner> solver;
+        solver.setMaxIterations(100);
+
+        solver.compute(X_A);
+        X_x = solver.solveWithGuess(X_b, X_x);
+        xError = solver.error();
+
+        solver.compute(Y_A);
+        Y_x = solver.solveWithGuess(Y_b, Y_x);
+        yError = solver.error();
+
+        updateModuleLocation(X_x, Y_x);
+        HPWL = db->calcNetBoundPins();
+
+        // if (1)
+        // {
+        //     SavePlotAsJPEG(string("FIP - Iter: ") + to_string(i), false,
+        //                    string(dir_bnd) + string("/initPlacement_") + intoFourDigit(i));
+        //     // SavePlot( string("FIP - Iter: ") + to_string(i) );
+        // }
+
+        double qp_time = seconds() - qp_start;
+        printf("INFO:  at iteration number %3d,  CG Error %.6lf,  HPWL %.6lf,  CPUtime %.2lf\n", i, max(xError, yError), HPWL, qp_time);
+
+        if (fabs(xError) < target_error && fabs(yError) < target_error && i > 4)
+        {
+            break;
+        }
+        if (i >= maxIterationNumber)
+        {
+            break;
+        }
+    }
+}
+
+void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, VectorXf &Y_x, VectorXf &X_b, VectorXf &Y_b)
+{
+    vector<T> tripletListX, tripletListY;
+    tripletListX.reserve(10000000);
+    tripletListY.reserve(10000000);
+    int nodeCount = db->dbNodes.size();
+    Module *curModule = NULL;
+    for (int i = 0; i < nodeCount; i++)
+    {
+        curModule = db->dbNodes[i];
+        assert(curModule);
+        assert(curModule->idx == i);
+        // 1d prec array
+        X_x(i) = curModule->getCenter().x; //!
+        Y_x(i) = curModule->getCenter().y;
+        X_b(i) = Y_b(i) = 0;
+    }
+
+    for (Net *curNet : db->dbNets)
+    {
+        assert(curNet);
+        int pinCount = curNet->netPins.size();
+        Pin *pin1;
+        Pin *pin2;
+        float constant1 = 1.0 / ((float)pinCount - 1.0); // see kraftwerk2 equation (8), here we follow eplace and use 1 instead of 2
+
+        for (int j = 0; j < pinCount; j++)
+        {
+            pin1 = curNet->netPins[j];
+            assert(pin1);
+            for (int k = j + 1; k < pinCount; k++)
+            {
+                pin2 = curNet->netPins[k];
+                assert(pin2);
+                if (pin1->module == pin2->module)
+                {
+                    continue;
+                }
+
+                if (pin1 == curNet->boundPinXmin || pin1 == curNet->boundPinXmax || pin2 == curNet->boundPinXmin || pin2 == curNet->boundPinXmax)
+                {
+                    float distanceX = fabs(pin1->getAbsolutePos().x - pin2->getAbsolutePos().x);
+
+                    float weightX = 0.0f; // see kraftwerk2 equation (8), here we follow eplace and use 1 instead of 2
+                    if (float_greaterorequal(distanceX, MIN_DISTANCE))
+                    {
+                        weightX = constant1 / distanceX;
+                    }
+                    else
+                    {
+                        weightX = constant1 / MIN_DISTANCE;
+                    }
+                    if (weightX < 0)
+                        printf("ERROR WEIGHT\n");
+
+                    if (!pin1->module->isFixed && !pin2->module->isFixed) // both are movable modules
+                    {
+                        tripletListX.push_back(T(pin1->module->idx, pin1->module->idx, weightX));
+                        tripletListX.push_back(T(pin2->module->idx, pin2->module->idx, weightX));
+
+                        tripletListX.push_back(
+                            T(pin1->module->idx, pin2->module->idx, (-1.0) * weightX));
+                        tripletListX.push_back(
+                            T(pin2->module->idx, pin1->module->idx, (-1.0) * weightX));
+
+                        X_b(pin1->module->idx) += (-1.0) * weightX * ((pin1->offset.x) - (pin2->offset.x));
+                        X_b(pin2->module->idx) += (-1.0) * weightX * ((pin2->offset.x) - (pin1->offset.x));
+                    }
+
+                    else if (pin1->module->isFixed && !pin2->module->isFixed) // 1 is terminal, 2 is movable
+                    {
+                        tripletListX.push_back(T(pin2->module->idx, pin2->module->idx, weightX));
+                        X_b(pin2->module->idx) += weightX * (pin1->getAbsolutePos().x - (pin2->offset.x));
+                    }
+
+                    else if (!pin1->module->isFixed && pin2->module->isFixed) // 2 is terminal, 1 is movable
+                    {
+                        tripletListX.push_back(T(pin1->module->idx, pin1->module->idx, weightX));
+                        X_b(pin1->module->idx) += weightX * (pin2->getAbsolutePos().x - (pin1->offset.x));
+                    }
+                }
+                if (pin2 == curNet->boundPinYmin || pin1 == curNet->boundPinYmax || pin2 == curNet->boundPinYmin || pin2 == curNet->boundPinYmax)
+                {
+                    float distanceY = fabs(pin1->getAbsolutePos().y - pin2->getAbsolutePos().y);
+
+                    float weightY = 0.0f; // see kraftwerk2 equation (8), here we follow eplace and use 1 instead of 2
+                    if (float_greaterorequal(distanceY, MIN_DISTANCE))
+                    {
+                        weightY = constant1 / distanceY;
+                    }
+                    else
+                    {
+                        weightY = constant1 / MIN_DISTANCE;
+                    }
+                    if (weightY < 0)
+                        printf("ERROR WEIGHT\n");
+
+                    if (!pin1->module->isFixed && !pin2->module->isFixed) // both are movable modules
+                    {
+                        tripletListY.push_back(T(pin1->module->idx, pin1->module->idx, weightY));
+                        tripletListY.push_back(T(pin2->module->idx, pin2->module->idx, weightY));
+
+                        tripletListY.push_back(
+                            T(pin1->module->idx, pin2->module->idx, (-1.0) * weightY));
+                        tripletListY.push_back(
+                            T(pin2->module->idx, pin1->module->idx, (-1.0) * weightY));
+
+                        Y_b(pin1->module->idx) += (-1.0) * weightY * ((pin1->offset.y) - (pin2->offset.y));
+                        Y_b(pin2->module->idx) += (-1.0) * weightY * ((pin2->offset.y) - (pin1->offset.y));
+                    }
+
+                    else if (pin1->module->isFixed && !pin2->module->isFixed) // 1 is terminal, 2 is movable
+                    {
+                        tripletListY.push_back(T(pin2->module->idx, pin2->module->idx, weightY));
+                        Y_b(pin2->module->idx) += weightY * (pin1->getAbsolutePos().y - (pin2->offset.y));
+                    }
+
+                    else if (!pin1->module->isFixed && pin2->module->isFixed) // 2 is terminal, 1 is movable
+                    {
+                        tripletListY.push_back(T(pin1->module->idx, pin1->module->idx, weightY));
+                        Y_b(pin1->module->idx) += weightY * (pin2->getAbsolutePos().y - (pin1->offset.y));
+                    }
+                }
+            }
+        }
+    }
+    X_A.setFromTriplets(tripletListX.begin(), tripletListX.end());
+    Y_A.setFromTriplets(tripletListY.begin(), tripletListY.end());
+}
+
+void QPPlacer::updateModuleLocation(VectorXf &X_x, VectorXf &Y_x)
+{
+    //! do indexs match?
+    int nodeCount = db->dbNodes.size();
+    Module *curModule;
+    for (int i = 0; i < nodeCount; i++)
+    {
+        curModule = db->dbNodes[i];
+        assert(curModule);
+        assert(curModule->idx == i);
+        db->setModuleCenter_2D(curModule, X_x(i), Y_x(i));
+    }
+}

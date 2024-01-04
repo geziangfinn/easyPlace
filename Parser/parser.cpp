@@ -460,7 +460,7 @@ int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
 
 int BookshelfParser::ReadPLFile(string file, PlaceDB &db)
 {
-	cout << "Initialize position with the file: " << file << "\n";
+	cout << "Initialize position with file: " << file << "\n";
 	string path;
 	gArg.GetString("path", &path);
 	path += file;
