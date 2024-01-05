@@ -33,6 +33,7 @@ int BookshelfParser::ReadFile(string file, PlaceDB &db)
 	ReadNodesFile(file_nodes, db); // blocks & cell width/height
 	ReadNetsFile(file_nets, db);   // read net file
 	ReadPLFile(file_pl, db);	   // initial module locations
+	db.setChipRegion_2D();
 	return 0;
 }
 

@@ -16,13 +16,16 @@ public:
         dbSiteRows.clear();
         dbTiers.clear();
         coreRegion = CRect();
+        chipRegion = CRect();
     };
     int layerCount;  // how many layers? this is for 3dic
     int moduleCount; // number of modules
     int netCount;
     int pinCount;
     double commonRowHeight; //! rowHeight that all(most of the times) rows share
-    CRect coreRegion;       // In 2d placement the core region is just the rectangle representing the chip, in 3d it might be shrunk
+
+    CRect coreRegion; // In 2d placement the core region is just the rectangle consists of all placement rows, in 3d it might be shrunk. coreRegion should be smaller than the whole chip
+    CRect chipRegion; // In bookshelf we don't know how large the chip is, so chip Region is obtained with coreRegion and all terminal locations. adapect1 is a good example
     // vector<Module *> dbModules;
 
     //! dbXxs: vector for storing Xxs
@@ -52,5 +55,6 @@ public:
     double calcHPWL();
     double calcNetBoundPins();
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
+    void setChipRegion_2D();
 };
 #endif

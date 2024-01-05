@@ -11,6 +11,8 @@
 #include <map>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include "string.h"
+#include "arghandler.h"
 using namespace std;
 const string padding(30, '=');
 #define EPS 1.0E-15 // for float number comparison
@@ -192,6 +194,15 @@ inline double seconds()
 
     // clock() loop is about 72min. (or 4320 sec)
     // return double(clock())/CLOCKS_PER_SEC;
+}
+
+inline void segmentFaultCP(string checkpointname)
+{
+    if(gArg.CheckExist("segDebug"))
+    {
+            cout<<endl<<padding<<checkpointname<<padding<<endl;
+    }
+
 }
 
 #endif

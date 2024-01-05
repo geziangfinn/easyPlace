@@ -6,6 +6,9 @@
 using namespace Eigen;
 void QPPlacer::quadraticPlacement()
 {
+    string plotPath;
+    assert(gArg.GetString("plotPath", &plotPath));
+    
     // TESTING, one HPWL can be removed in the future
     db->moveNodesCenterToCenter(); //!!!!!!
 
@@ -21,7 +24,7 @@ void QPPlacer::quadraticPlacement()
     float target_error = 0.000001;
 
     cout << "INFO:  The Initial HPWL is " << HPWL << endl;
-    cout << "INFO:  The Initial HPWL is " << nodeCount << endl; //! matrix size: only nodes(movable modules)
+    cout << "INFO:  The matrix size is " << nodeCount << endl; //! matrix size: only nodes(movable modules)
 
     setNbThreads(8); //! a parameter(numThreads) fixed here
 
@@ -31,17 +34,17 @@ void QPPlacer::quadraticPlacement()
 
     for (int i = 0;; i++)
     {
-
+        segmentFaultCP("cp1");
         double qp_start = seconds();
         createSparseMatrix(X_A, Y_A, X_x, Y_x, X_b, Y_b);
-
+        segmentFaultCP("cp2");
         BiCGSTAB<SMatrix, IdentityPreconditioner> solver;
         solver.setMaxIterations(100);
-
+        segmentFaultCP("cp3");
         solver.compute(X_A);
         X_x = solver.solveWithGuess(X_b, X_x);
         xError = solver.error();
-
+        segmentFaultCP("cp4");
         solver.compute(Y_A);
         Y_x = solver.solveWithGuess(Y_b, Y_x);
         yError = solver.error();
@@ -49,12 +52,10 @@ void QPPlacer::quadraticPlacement()
         updateModuleLocation(X_x, Y_x);
         HPWL = db->calcNetBoundPins();
 
-        // if (1)
-        // {
-        //     SavePlotAsJPEG(string("FIP - Iter: ") + to_string(i), false,
-        //                    string(dir_bnd) + string("/initPlacement_") + intoFourDigit(i));
-        //     // SavePlot( string("FIP - Iter: ") + to_string(i) );
-        // }
+        if (1)
+        {
+            plotter->plotCurrentPlacement("Initial placement iteration " + to_string(i), plotPath);
+        }
 
         double qp_time = seconds() - qp_start;
         printf("INFO:  at iteration number %3d,  CG Error %.6lf,  HPWL %.6lf,  CPUtime %.2lf\n", i, max(xError, yError), HPWL, qp_time);
@@ -72,22 +73,22 @@ void QPPlacer::quadraticPlacement()
 
 void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, VectorXf &Y_x, VectorXf &X_b, VectorXf &Y_b)
 {
-    vector<T> tripletListX, tripletListY;
-    tripletListX.reserve(10000000);
-    tripletListY.reserve(10000000);
+    vector<T> tripletListX, tripletListY; // create matrix A with triples, a triple：(i,j,v), means Aij=v
+    tripletListX.reserve(1000000);
+    tripletListY.reserve(1000000);
     int nodeCount = db->dbNodes.size();
-    Module *curModule = NULL;
+    segmentFaultCP("cp7");
+    Module *curNode = NULL;
     for (int i = 0; i < nodeCount; i++)
     {
-        curModule = db->dbNodes[i];
-        assert(curModule);
-        assert(curModule->idx == i);
-        // 1d prec array
-        X_x(i) = curModule->getCenter().x; //!
-        Y_x(i) = curModule->getCenter().y;
+        curNode = db->dbNodes[i];
+        assert(curNode);
+        assert(curNode->idx == i);
+        X_x(i) = curNode->getCenter().x; //!
+        Y_x(i) = curNode->getCenter().y;
         X_b(i) = Y_b(i) = 0;
     }
-
+    segmentFaultCP("cp8");
     for (Net *curNet : db->dbNets)
     {
         assert(curNet);
@@ -95,7 +96,6 @@ void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, Vec
         Pin *pin1;
         Pin *pin2;
         float constant1 = 1.0 / ((float)pinCount - 1.0); // see kraftwerk2 equation (8), here we follow eplace and use 1 instead of 2
-
         for (int j = 0; j < pinCount; j++)
         {
             pin1 = curNet->netPins[j];
@@ -196,20 +196,22 @@ void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, Vec
             }
         }
     }
+    segmentFaultCP("cp10");
     X_A.setFromTriplets(tripletListX.begin(), tripletListX.end());
     Y_A.setFromTriplets(tripletListY.begin(), tripletListY.end());
+    segmentFaultCP("cp11");
 }
 
 void QPPlacer::updateModuleLocation(VectorXf &X_x, VectorXf &Y_x)
 {
     //! do indexs match?
     int nodeCount = db->dbNodes.size();
-    Module *curModule;
+    Module *curNode;
     for (int i = 0; i < nodeCount; i++)
     {
-        curModule = db->dbNodes[i];
-        assert(curModule);
-        assert(curModule->idx == i);
-        db->setModuleCenter_2D(curModule, X_x(i), Y_x(i));
+        curNode = db->dbNodes[i];
+        assert(curNode);
+        assert(curNode->idx == i);
+        db->setModuleCenter_2D(curNode, X_x(i), Y_x(i));
     }
 }

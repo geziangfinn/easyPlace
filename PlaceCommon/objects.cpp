@@ -126,13 +126,27 @@ void Module::addPin(Pin *_pin)
     modulePins.push_back(_pin);
 }
 
+POS_3D Module::getLL_2D()
+{
+    return coor;
+}
+
+POS_3D Module::getUR_2D()
+{
+    POS_3D ur=coor;
+    ur.x+=width;
+    ur.y+=height;
+    assert(width!=0&&height!=0);
+    return ur;
+}
+
 void Module::setOrientation(int _oritentation)
 {
     orientation = _oritentation;
 }
 
 //! need to check if coor is out side of the chip!!! but should be done in placeDB
-void Module::setLocation_2D(float _x, float _y, float _z = 0)
+void Module::setLocation_2D(float _x, float _y, float _z )
 {
     coor.x = _x;
     coor.y = _y;
@@ -143,7 +157,7 @@ void Module::setLocation_2D(float _x, float _y, float _z = 0)
     center.z = coor.z;
 }
 
-void Module::setCenter_2D(float _x, float _y, float _z = 0)
+void Module::setCenter_2D(float _x, float _y, float _z )
 {
     center.x=_x;
     center.y=_y;

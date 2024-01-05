@@ -83,16 +83,17 @@ public:
         Init();
     }
 
-    Module(int index, string name, float width = 0, float height = 0, bool isFixed = false, bool isNI = false)
+    Module(int _index, string _name, float _width = 0, float _height = 0, bool _isFixed = false, bool _isNI = false)
     {
         Init();
-        name = name;
-        width = width;
-        height = height;
+        name = _name;
+        width = _width;
+        height = _height;
         area = width * height;
         isMacro = false;
-        isFixed = isFixed;
-        isNI = isNI; // 2022-05-13 (frank)
+        isFixed = _isFixed;
+        isNI = _isNI; // 2022-05-13 (frank)
+        idx=_index;
         assert(area >= 0);
     }
     int idx;
@@ -132,6 +133,8 @@ public:
     float getHeight() { return height; }
     POS_3D getLocation() { return coor; }
     POS_3D getCenter(){return center;}
+    POS_3D getLL_2D();
+    POS_3D getUR_2D();
     float getArea() { return area; }
     short int getOrientation() { return orientation; }
     void setOrientation(int);
@@ -205,7 +208,6 @@ public:
     {
         return (r1.bottom > r2.bottom);
     }
-
     bool isInside(const double &x, const double width)
     {
         // vector<double>::const_iterator ite;

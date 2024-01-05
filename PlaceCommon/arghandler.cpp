@@ -55,7 +55,8 @@ bool CArgHandler::GetInt(const string caption, int *variable)
         return false;
 
     *variable = atoi(m_argv[index + 1]);
-    return false;
+    //return false;
+    return true;
 }
 
 bool CArgHandler::GetDouble(const string caption, double *variable)
@@ -77,7 +78,8 @@ bool CArgHandler::GetDouble(const string caption, double *variable)
         return false;
 
     *variable = atof(m_argv[index + 1]);
-    return false;
+    //return false;
+    return true;
 }
 
 // (kaie)
@@ -100,7 +102,8 @@ bool CArgHandler::GetFloat(const string caption, float *variable)
         return false;
 
     *variable = (float)atof(m_argv[index + 1]);
-    return false;
+    //return false;
+    return true;
 }
 // @(kaie)
 
@@ -131,7 +134,8 @@ bool CArgHandler::GetString(const string caption, string *variable)
         return false;
 
     *variable = m_argv[index + 1];
-    return false;
+    //return false;
+    return true;
 }
 
 bool CArgHandler::CheckExist(const string caption)
