@@ -90,7 +90,7 @@ void PlaceDB::allocateNetMemory(int n)
     dbNets.resize(n);
 }
 
-void PlaceDB::allocatePinMemory(int n) // difference between resize and reserve: we can use index to index an element in a vector after allocation and before the element was instantiated
+void PlaceDB::allocatePinMemory(int n) // difference between resize and reserve: with resize we can use index to index an element in a vector after allocation and before the element was instantiated
 {
     dbPins.reserve(n); //! reserve instead of resize
 }

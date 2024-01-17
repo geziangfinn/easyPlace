@@ -130,6 +130,10 @@ struct VECTOR_2D
 {
     float x;
     float y;
+    inline void SetZero()
+    {
+        x = y = 0;
+    }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_2D &vec)
     {
         os << "[" << vec.x << "," << vec.y << "]"; // [] for vectors and () for pos
@@ -153,6 +157,12 @@ inline float float_mul(float a, float b) // perform float number multiplication
     return c;
 }
 
+inline float float_div(float a, float b) // perform float number multiplication
+{
+    float c = a / b;
+    return c;
+}
+
 inline bool float_greater(float a, float b) // return true if a > b
 {
     return a - b > 1.0 * EPS;
@@ -164,7 +174,7 @@ inline bool float_less(float a, float b) // return true if a < b
 }
 inline bool float_equal(float a, float b)
 {
-    return fabs(a-b) < EPS;
+    return fabs(a - b) < EPS;
 }
 
 inline bool float_lessorequal(float a, float b)
@@ -198,11 +208,27 @@ inline double seconds()
 
 inline void segmentFaultCP(string checkpointname)
 {
-    if(gArg.CheckExist("segDebug"))
+    if (gArg.CheckExist("segDebug"))
     {
-            cout<<endl<<padding<<checkpointname<<padding<<endl;
+        cout << endl
+             << padding << checkpointname << padding << endl;
     }
+}
 
+inline float fastExp(float a)
+{
+    a = 1.0f + a / 1024.0f;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    a *= a;
+    return a;
 }
 
 #endif

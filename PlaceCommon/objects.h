@@ -89,11 +89,10 @@ public:
         name = _name;
         width = _width;
         height = _height;
-        area = width * height;
-        isMacro = false;
+        area = float_mul(width, height);
         isFixed = _isFixed;
         isNI = _isNI; // 2022-05-13 (frank)
-        idx=_index;
+        idx = _index;
         assert(area >= 0);
     }
     int idx;
@@ -118,6 +117,8 @@ public:
         height = 0;
         area = 0;
         orientation = 0;
+        isMacro = false;
+        isFiller = false;
         isFixed = false;
         isNI = false;
         tier = NULL;
@@ -132,7 +133,7 @@ public:
     float getWidth() { return width; }
     float getHeight() { return height; }
     POS_3D getLocation() { return coor; }
-    POS_3D getCenter(){return center;}
+    POS_3D getCenter() { return center; }
     POS_3D getLL_2D();
     POS_3D getUR_2D();
     float getArea() { return area; }

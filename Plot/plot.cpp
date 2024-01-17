@@ -68,5 +68,6 @@ int Plotter::getX(float x, float unitX)
 int Plotter::getY(float y, float unitY)
 {
     float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
-    return (chipRegionHeight - (y - db->chipRegion.ll.y)) * unitY;
+    return (chipRegionHeight - (y - db->chipRegion.ll.y)) * unitY;//? 
+    //return (chipRegionHeight - y) * unitY;//? 
 }

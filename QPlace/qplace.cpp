@@ -34,17 +34,17 @@ void QPPlacer::quadraticPlacement()
 
     for (int i = 0;; i++)
     {
-        segmentFaultCP("cp1");
+
         double qp_start = seconds();
         createSparseMatrix(X_A, Y_A, X_x, Y_x, X_b, Y_b);
-        segmentFaultCP("cp2");
+
         BiCGSTAB<SMatrix, IdentityPreconditioner> solver;
         solver.setMaxIterations(100);
-        segmentFaultCP("cp3");
+
         solver.compute(X_A);
         X_x = solver.solveWithGuess(X_b, X_x);
         xError = solver.error();
-        segmentFaultCP("cp4");
+
         solver.compute(Y_A);
         Y_x = solver.solveWithGuess(Y_b, Y_x);
         yError = solver.error();
@@ -77,7 +77,7 @@ void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, Vec
     tripletListX.reserve(1000000);
     tripletListY.reserve(1000000);
     int nodeCount = db->dbNodes.size();
-    segmentFaultCP("cp7");
+
     Module *curNode = NULL;
     for (int i = 0; i < nodeCount; i++)
     {
@@ -88,7 +88,7 @@ void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, Vec
         Y_x(i) = curNode->getCenter().y;
         X_b(i) = Y_b(i) = 0;
     }
-    segmentFaultCP("cp8");
+
     for (Net *curNet : db->dbNets)
     {
         assert(curNet);
@@ -196,10 +196,10 @@ void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, Vec
             }
         }
     }
-    segmentFaultCP("cp10");
+
     X_A.setFromTriplets(tripletListX.begin(), tripletListX.end());
     Y_A.setFromTriplets(tripletListY.begin(), tripletListY.end());
-    segmentFaultCP("cp11");
+
 }
 
 void QPPlacer::updateModuleLocation(VectorXf &X_x, VectorXf &Y_x)
