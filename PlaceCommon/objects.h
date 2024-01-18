@@ -89,7 +89,7 @@ public:
         name = _name;
         width = _width;
         height = _height;
-        area = float_mul(width, height);
+        area = float_mul(width, height);//! area calculated here!
         isFixed = _isFixed;
         isNI = _isNI; // 2022-05-13 (frank)
         idx = _index;
@@ -134,8 +134,8 @@ public:
     float getHeight() { return height; }
     POS_3D getLocation() { return coor; }
     POS_3D getCenter() { return center; }
-    POS_3D getLL_2D();
-    POS_3D getUR_2D();
+    POS_2D getLL_2D();
+    POS_2D getUR_2D();
     float getArea() { return area; }
     short int getOrientation() { return orientation; }
     void setOrientation(int);
@@ -196,11 +196,12 @@ public:
     double height;         // The height of this SiteRow of sites
     double step;           // The minimum x step of SiteRow.	by indark
     POS_2D start;          // lower left coor of this row;
-    POS_2D end;            // lower right coor of this row;
+    POS_2D end;            //! lower right coor of this row;
     ORIENT orientation;    // donnie 2006-04-23  N (0) or S (1)
     vector<Row> intervals; //!
     // double site_spacing;// site spacing in bookshelf format, equals to site width
-
+    POS_2D getLL_2D();
+    POS_2D getUR_2D();
     bool Lesser(SiteRow &r1, SiteRow &r2)
     {
         return (r1.bottom < r2.bottom);
@@ -224,29 +225,9 @@ public:
     }
     friend inline std::ostream &operator<<(std::ostream &os, const SiteRow &row)
     {
-        os << "Row start: " << row.start << " Row end:" << row.end;
+        os << "SiteRow start: " << row.start << " SiteRow end:" << row.end;
         return os;
     }
-};
-
-class CRect
-{
-public:
-    CRect()
-    {
-        Init();
-    }
-    void Print()
-    {
-        cout << "lower left: " << ll << " upper right: " << ur << "\n";
-    }
-    void Init()
-    {
-        ll.SetZero();
-        ur.SetZero();
-    }
-    POS_2D ll; // ll: lower left point
-    POS_2D ur; // ur: upper right point
 };
 
 class Tier // one 2D plane(or one 2D chip)

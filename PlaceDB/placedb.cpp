@@ -7,12 +7,16 @@ void PlaceDB::setCoreRegion()
     float top = dbSiteRows.back().bottom + dbSiteRows.back().height;
     float left = dbSiteRows.front().start.x;
     float right = dbSiteRows.front().end.x;
-
+    
+    totalRowArea=0;
+    float curRowArea=0;
     for (SiteRow curRow : dbSiteRows)
     {
         left = min(left, curRow.start.x);
         right = max(right, curRow.end.x);
         // printf( "right= %g\n", m_coreRgn.right );
+        curRowArea=(curRow.end.x-curRow.start.x)*curRow.height;
+        totalRowArea+=curRowArea;
     }
 
     coreRegion.ll = POS_2D(left, bottom);
@@ -20,13 +24,6 @@ void PlaceDB::setCoreRegion()
 
     cout << "Set core region from site info: ";
     coreRegion.Print();
-
-    // Add fixed blocks to fill "non-sites"
-    // int number = CreateDummyFixedBlock();
-    // cout << "Add " << number << " fixed blocks\n";
-
-    // number = CreateDummyBlock();
-    // cout << "Add " << number << " dummy blocks\n";
 }
 
 void PlaceDB::init_tiers()

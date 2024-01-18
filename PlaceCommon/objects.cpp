@@ -126,18 +126,26 @@ void Module::addPin(Pin *_pin)
     modulePins.push_back(_pin);
 }
 
-POS_3D Module::getLL_2D()
+POS_2D Module::getLL_2D()
 {
-    return coor;
+    POS_2D ll_2D;
+    ll_2D.x = coor.x;
+    ll_2D.y = coor.y;
+    return ll_2D;
 }
 
-POS_3D Module::getUR_2D()
+POS_2D Module::getUR_2D()
 {
-    POS_3D ur=coor;
-    ur.x+=width;
-    ur.y+=height;
-    assert(width!=0&&height!=0);
-    return ur;
+    POS_2D ur_2D;
+
+    ur_2D.x = coor.x;
+    ur_2D.y = coor.y;
+
+    ur_2D.x += width;
+    ur_2D.y += height;
+
+    assert(width != 0 && height != 0);
+    return ur_2D;
 }
 
 void Module::setOrientation(int _oritentation)
@@ -146,25 +154,36 @@ void Module::setOrientation(int _oritentation)
 }
 
 //! need to check if coor is out side of the chip!!! but should be done in placeDB
-void Module::setLocation_2D(float _x, float _y, float _z )
+void Module::setLocation_2D(float _x, float _y, float _z)
 {
     coor.x = _x;
     coor.y = _y;
     coor.z = _z;
-    //update center
+    // update center
     center.x = coor.x + (float)0.5 * width; //! be careful of float problems
     center.y = coor.y + (float)0.5 * height;
     center.z = coor.z;
 }
 
-void Module::setCenter_2D(float _x, float _y, float _z )
+void Module::setCenter_2D(float _x, float _y, float _z)
 {
-    center.x=_x;
-    center.y=_y;
-    center.z=_z;
-    //update coor
+    center.x = _x;
+    center.y = _y;
+    center.z = _z;
+    // update coor
     coor.x = center.x - (float)0.5 * width; //! be careful of float problems
     coor.y = center.y - (float)0.5 * height;
     coor.z = center.z;
 }
 
+POS_2D SiteRow::getLL_2D()
+{
+    return start;
+}
+
+POS_2D SiteRow::getUR_2D()
+{
+    POS_2D ur_2D=end;
+    ur_2D.y+=height;
+    return ur_2D;
+}

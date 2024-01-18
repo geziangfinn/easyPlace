@@ -151,6 +151,27 @@ struct VECTOR_3D
         return os;
     }
 };
+
+class CRect
+{
+public:
+    CRect()
+    {
+        Init();
+    }
+    void Print()
+    {
+        cout << "lower left: " << ll << " upper right: " << ur << "\n";
+    }
+    void Init()
+    {
+        ll.SetZero();
+        ur.SetZero();
+    }
+    POS_2D ll; // ll: lower left point
+    POS_2D ur; // ur: upper right point
+};
+
 inline float float_mul(float a, float b) // perform float number multiplication
 {
     float c = a * b;
@@ -231,4 +252,76 @@ inline float fastExp(float a)
     return a;
 }
 
+inline double getOverlap(double x1, double x2, double x3, double x4) // two lines: x1->x2 and x3->x4
+{
+    assert(x1 <= x2);
+    assert(x3 <= x4);
+
+    double left, right;
+    if (x1 >= x3 && x1 < x4)
+        left = x1; // x3---x1---x4
+    else if (x3 >= x1 && x3 < x2)
+        left = x3; // x1---x3---x2
+    else
+        return 0;
+
+    if (x2 > x3 && x2 <= x4)
+        right = x2; // x3---x2---x4
+    else if (x4 > x1 && x4 <= x2)
+        right = x4; // x1---x4---x2
+    else
+        return 0;
+
+    assert(right >= left);
+
+    return (right - left);
+}
+
+inline double getOverlapArea(double left1, double bottom1, double right1, double top1,
+                             double left2, double bottom2, double right2, double top2)
+{
+    assert(left1 <= right1);
+    assert(bottom1 <= top1);
+    assert(left2 <= right2);
+    assert(bottom2 <= top2);
+
+    double rangeH;
+    rangeH = getOverlap(left1, right1, left2, right2);
+    if (rangeH == 0)
+        return 0;
+
+    double rangeV;
+    rangeV = getOverlap(bottom1, top1, bottom2, top2);
+    if (rangeV == 0)
+        return 0;
+
+    return (rangeH * rangeV);
+}
+
+inline double getOverlapArea_2D(CRect rect1, CRect rect2)
+{
+    double left1 = rect1.ll.x;
+    double bottom1 = rect1.ll.y;
+    double right1 = rect1.ur.x;
+    double top1 = rect1.ur.y;
+    double left2 = rect2.ll.x;
+    double bottom2 = rect2.ll.y;
+    double right2 = rect2.ur.x;
+    double top2 = rect2.ur.y;
+    return getOverlapArea(left1, bottom1, right1, top1, left2, bottom2, right2, top2);
+}
+
+inline double getOverlapArea_2D(POS_2D ll1, POS_2D ur1, POS_2D ll2, POS_2D ur2)
+{
+    CRect rect1;
+    CRect rect2;
+
+    rect1.ll = ll1;
+    rect1.ur = ur1;
+
+    rect2.ll = ll2;
+    rect2.ur = ur2;
+
+    return getOverlapArea_2D(rect1, rect2);
+}
 #endif
