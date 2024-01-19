@@ -57,6 +57,7 @@ public:
     void setModuleLocation_2D(Module *, float, float);
     void setModuleCenter_2D(Module *, float, float);
     void setModuleOrientation(Module *, int);
+    void setModuleLocation_2D_random(Module*);
     
     double calcHPWL();
     double calcNetBoundPins();

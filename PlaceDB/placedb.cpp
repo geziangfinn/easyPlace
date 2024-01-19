@@ -165,6 +165,28 @@ void PlaceDB::setModuleOrientation(Module *module, int orientation)
     module->setOrientation(orientation);
 }
 
+void PlaceDB::setModuleLocation_2D_random(Module *module)
+{
+    assert(module);
+    float x=rand();
+    float y=rand();
+
+    assert(coreRegion.ur.x>coreRegion.ll.x);
+    assert(coreRegion.ur.y>coreRegion.ll.y);
+    
+    float potentialRegionWidth=coreRegion.ur.x-coreRegion.ll.x;// potential region for randomly place module
+    float potentialRegionHeight=coreRegion.ur.y-coreRegion.ll.y;
+    
+    potentialRegionHeight-=module->getHeight();
+    potentialRegionWidth-=module->getWidth();
+
+    float RAND_MAX_INVERSE=(float)1.0 / RAND_MAX;
+    x=x*RAND_MAX_INVERSE*potentialRegionWidth;
+    y=y*RAND_MAX_INVERSE*potentialRegionHeight;
+
+    setModuleLocation_2D(module,x,y);
+}
+
 double PlaceDB::calcHPWL() //! parallel this?
 {
     double HPWL = 0;
@@ -208,4 +230,5 @@ void PlaceDB::setChipRegion_2D()
         chipRegion.ur.y = max(chipRegion.ur.y, curTerminal->getUR_2D().y);
         //gmax.z = max(gmax.z, curTerminal->pmax.z);
     }
+    //!!!!!!!chipRegion.ll!=(0,0)
 }

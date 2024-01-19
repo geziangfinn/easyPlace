@@ -18,7 +18,8 @@ const string padding(30, '=');
 #define EPS 1.0E-15 // for float number comparison
 #define DOUBLE_MAX __DBL_MAX__
 #define DOUBLE_MIN __DBL_MIN__
-
+#define INT_CONVERT(a) (int)(1.0 * (a) + 0.5f)
+#define INT_DOWN(a) (int)(a)
 //! The followings are colors used for log(in shell)
 #define RESET "\033[0m"
 #define BLACK "\033[30m"              /* Black */
@@ -140,6 +141,22 @@ struct VECTOR_2D
         return os;
     }
 };
+
+struct VECTOR_2D_INT
+{
+    int x;
+    int y;
+    inline void SetZero()
+    {
+        x = y = 0;
+    }
+    friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_2D_INT &vec)
+    {
+        os << "[" << vec.x << "," << vec.y << "]"; // [] for vectors and () for pos
+        return os;
+    }
+};
+
 struct VECTOR_3D
 {
     float x;
@@ -172,13 +189,13 @@ public:
     POS_2D ur; // ur: upper right point
 };
 
-inline float float_mul(float a, float b) // perform float number multiplication
+inline float float_mul(float a, float b) // a*b
 {
     float c = a * b;
     return c;
 }
 
-inline float float_div(float a, float b) // perform float number multiplication
+inline float float_div(float a, float b) // a/b
 {
     float c = a / b;
     return c;
@@ -206,6 +223,20 @@ inline bool float_lessorequal(float a, float b)
 inline bool float_greaterorequal(float a, float b)
 {
     return float_greater(a, b) || float_equal(a, b);
+}
+
+inline POS_2D POS_2D_add(POS_2D a, POS_2D b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+}
+
+inline POS_2D POS_2D_scale(POS_2D a, float scaleFactor)
+{
+    a.x *= scaleFactor;
+    a.y *= scaleFactor;
+    return a;
 }
 
 inline double seconds()
@@ -257,24 +288,18 @@ inline double getOverlap(double x1, double x2, double x3, double x4) // two line
     assert(x1 <= x2);
     assert(x3 <= x4);
 
-    double left, right;
-    if (x1 >= x3 && x1 < x4)
-        left = x1; // x3---x1---x4
-    else if (x3 >= x1 && x3 < x2)
-        left = x3; // x1---x3---x2
-    else
+    // overlapStart: start point of the overlap line
+    double overlapStart= max(x1, x3);
+    double overlapEnd = min(x2, x4);
+
+    if (overlapStart >= overlapEnd)
+    {
         return 0;
-
-    if (x2 > x3 && x2 <= x4)
-        right = x2; // x3---x2---x4
-    else if (x4 > x1 && x4 <= x2)
-        right = x4; // x1---x4---x2
+    }
     else
-        return 0;
-
-    assert(right >= left);
-
-    return (right - left);
+    {
+        return (overlapStart - overlapEnd);
+    }
 }
 
 inline double getOverlapArea(double left1, double bottom1, double right1, double top1,
