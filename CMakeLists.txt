@@ -6,3 +6,4 @@ SET(CMAKE_CXX_FLAGS "-m64 -O3 -fpermissive -std=c++1y -fPIC -funroll-loops -ffas
 #SET(CMAKE_EXE_LINKER_FLAGS "-static")
 ADD_SUBDIRECTORY (QPlace)
 ADD_SUBDIRECTORY (Parser)
+ADD_SUBDIRECTORY (EPlace)

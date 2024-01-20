@@ -8,7 +8,8 @@ void EPlacer_2D::setTargetDensity(float target)
 
 void EPlacer_2D::fillerInitialization()
 {
-    //!//////////////////////////////////////////////////////////////
+    segmentFaultCP("fillerInit");
+    ////////////////////////////////////////////////////////////////
     // calculate whitespace area
     /////////////////////////////////////////////////////////////////
 
@@ -133,16 +134,18 @@ void EPlacer_2D::fillerInitialization()
 
 void EPlacer_2D::binInitialization()
 {
+    segmentFaultCP("binInit");
     //! Bins are allocated on coreRegion! RePlAce code bin.cpp line 337 and bookshelfIO.cpp, also see ePlace paper
     ////////////////////////////////////////////////////////////////
     // calculate bin dimension and size
     ////////////////////////////////////////////////////////////////
     //! this code for bin dimension calculation is copied directly from RePlAce
+    segmentFaultCP("binDim");
     int nodeCount = db->dbNodes.size();
     float nodeArea = (ePlaceStdCellArea + ePlaceMacroArea);
 
-    float coreRegionWidth = db->coreRegion.ur.x - db->coreRegion.ll.x;
-    float coreRegionHeight = db->coreRegion.ur.y - db->coreRegion.ur.x;
+    float coreRegionWidth = db->coreRegion.getWidth();
+    float coreRegionHeight = db->coreRegion.getHeight();
     float coreRegionArea = float_mul(coreRegionWidth, coreRegionHeight);
 
     float averageNodeArea = 1.0 * nodeArea / nodeCount;
@@ -166,12 +169,15 @@ void EPlacer_2D::binInitialization()
         binDimension.x = binDimension.y = 1024; //!
     }
 
+    cout << "Bin dimension: " << binDimension;
+
     binStep.x = float_div(coreRegionWidth, binDimension.x);
     binStep.y = float_div(coreRegionHeight, binDimension.y);
 
     ////////////////////////////////////////////////////////////////
     // add bins
     ////////////////////////////////////////////////////////////////
+    segmentFaultCP("addBin");
     // x stored in first dimension of vector
     //! bin index:
     //! # 5
@@ -190,6 +196,8 @@ void EPlacer_2D::binInitialization()
         bins[i].resize(binDimension.y);
         for (int j = 0; j < binDimension.y; j++)
         {
+            bins[i][j] = new Bin_2D();
+            // cout<<"adding bin "<<i<<","<<j<<endl;
             //!!! +db->coreRegion.ll.x to get coordinates!!
             bins[i][j]->ll.x = i * binStep.x + db->coreRegion.ll.x;
             bins[i][j]->ll.y = j * binStep.y + db->coreRegion.ll.y;
@@ -210,6 +218,7 @@ void EPlacer_2D::binInitialization()
     ////////////////////////////////////////////////////////////////
     // terminal density calculation, calculate here because they are terminals and only needed to be considered once
     ////////////////////////////////////////////////////////////////
+    segmentFaultCP("terminalDensity");
     VECTOR_2D_INT binStartIdx;
     VECTOR_2D_INT binEndIdx;
 
@@ -232,6 +241,8 @@ void EPlacer_2D::binInitialization()
         binStartIdx.y = INT_DOWN((curTerminal->getLL_2D().y - db->coreRegion.ll.y) / binStep.y);
         binEndIdx.y = INT_DOWN((curTerminal->getUR_2D().y - db->coreRegion.ll.y) / binStep.y);
 
+        cout << curTerminal->getLL_2D() << curTerminal->getUR_2D() << endl;
+        cout << binStep << " " << db->coreRegion.ll << endl;
         assert(binStartIdx.x >= 0);
         assert(binEndIdx.x >= 0);
         assert(binStartIdx.y >= 0);
@@ -259,22 +270,76 @@ void EPlacer_2D::binInitialization()
     ////////////////////////////////////////////////////////////////
     // base density calculation, also only needed to be considered once
     ////////////////////////////////////////////////////////////////
+    segmentFaultCP("baseDensity");
+    for (int i = 0; i < binDimension.x; i++)
+    {
+        for (int j = 0; j < binDimension.y; j++)
+        {
+            float curBinAvailableArea = 0; // overlap area between current bin and placement rows
+            for (SiteRow curRow : db->dbSiteRows)
+            {
+                curBinAvailableArea += getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, curRow.getLL_2D(), curRow.getUR_2D());
+            }
+            debugOutput("Bin area", bins[i][j]->area);
+            debugOutput("Available area", curBinAvailableArea);
+            if (float_equal(bins[i][j]->area, curBinAvailableArea))
+            {
+                bins[i][j]->baseDensity=0;
+            }
+            else
+            {
+                bins[i][j]->baseDensity = targetDensity * (bins[i][j]->area - curBinAvailableArea); //! follow RePlAce bin.cpp line 433
+            }
+        }
+    }
 }
 
-void EPlacer_2D::binDensityUpdate()
+void EPlacer_2D::binNodeDensityUpdate()
 {
-    VECTOR_2D_INT binStartIdx;
-    VECTOR_2D_INT binEndIdx;
-
-    // binStartIdx: index the index of the first bin that has overlap with a cell on X/Y direction
-
-    for (Module *curNode : ePlaceNodes)
+    segmentFaultCP("nodeDensity");
+    for (Module *curNode : ePlaceNodes) // ePlaceNodes: nodes and filler nodes
     {
-        binStartIdx.x = INT_DOWN((curNode->getLL_2D().x - db->coreRegion.ll.x) / binStep.x);
-        binEndIdx.x = INT_DOWN((curNode->getUR_2D().x - db->coreRegion.ll.x) / binStep.x);
+        bool localSmooth = false;
+        bool macroDensityScaling = false; // density scaling, see ePlace paper
 
-        binStartIdx.y = INT_DOWN((curNode->getLL_2D().y - db->coreRegion.ll.y) / binStep.y);
-        binEndIdx.y = INT_DOWN((curNode->getUR_2D().y - db->coreRegion.ll.y) / binStep.y);
+        VECTOR_2D localSmoothLengthScale; // see ePlace paper page 15 or RePlace opt.cpp line 1460
+        localSmoothLengthScale.x = 1;
+        localSmoothLengthScale.y = 1;
+
+        CRect rectForCurNode;
+        rectForCurNode.ll = curNode->getLL_2D();
+        rectForCurNode.ur = curNode->getUR_2D();
+
+        if (!curNode->isMacro)
+        {
+            //! beware: local smooth on x and y dimension!
+            //! binStart and binEnd should be calculated with inflated cell width and height, see replace bin.cpp line 1807
+            POS_2D cellCenter = rectForCurNode.getCenter();
+
+            if (float_less(curNode->getWidth(), binStep.x))
+            {
+                localSmoothLengthScale.x = curNode->getWidth() / binStep.x;
+                rectForCurNode.ll.x = cellCenter.x - 0.5 * binStep.x;
+                rectForCurNode.ur.x = cellCenter.x + 0.5 * binStep.x;
+            }
+            if (float_less(curNode->getHeight(), binStep.y))
+            {
+                localSmoothLengthScale.y = curNode->getHeight() / binStep.y;
+                rectForCurNode.ll.y = cellCenter.y - 0.5 * binStep.y;
+                rectForCurNode.ur.y = cellCenter.y + 0.5 * binStep.y;
+            }
+        }
+        else
+        {
+            macroDensityScaling = true;
+        }
+        VECTOR_2D_INT binStartIdx; // binStartIdx: index the index of the first bin that has overlap with a cell on X/Y direction
+        VECTOR_2D_INT binEndIdx;
+        binStartIdx.x = INT_DOWN((rectForCurNode.ll.x - db->coreRegion.ll.x) / binStep.x);
+        binEndIdx.x = INT_DOWN((rectForCurNode.ur.x - db->coreRegion.ll.x) / binStep.x);
+
+        binStartIdx.y = INT_DOWN((rectForCurNode.ll.y - db->coreRegion.ll.y) / binStep.y);
+        binEndIdx.y = INT_DOWN((rectForCurNode.ur.y - db->coreRegion.ll.y) / binStep.y);
 
         assert(binStartIdx.x >= 0);
         assert(binEndIdx.x >= 0);
@@ -296,6 +361,16 @@ void EPlacer_2D::binDensityUpdate()
         {
             for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
             {
+
+                float overlapArea = getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
+                if (macroDensityScaling)
+                {
+                    bins[i][j]->nodeDensity += targetDensity * overlapArea;
+                }
+                else
+                {
+                    bins[i][j]->nodeDensity += localSmoothLengthScale.x * localSmoothLengthScale.y * overlapArea;
+                }
             }
         }
     }

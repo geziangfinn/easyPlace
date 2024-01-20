@@ -52,7 +52,7 @@ void QPPlacer::quadraticPlacement()
         updateModuleLocation(X_x, Y_x);
         HPWL = db->calcNetBoundPins();
 
-        if (1)
+        if (gArg.CheckExist("debug")||gArg.CheckExist("fullPlot"))
         {
             plotter->plotCurrentPlacement("Initial placement iteration " + to_string(i), plotPath);
         }

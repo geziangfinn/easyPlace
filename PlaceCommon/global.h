@@ -185,8 +185,27 @@ public:
         ll.SetZero();
         ur.SetZero();
     }
-    POS_2D ll; // ll: lower left point
-    POS_2D ur; // ur: upper right point
+    POS_2D ll; // ll: lower left coor
+    POS_2D ur; // ur: upper right coor
+    float getWidth()
+    {
+        float width = ur.x - ll.x;
+        assert(width > 0);
+        return width;
+    }
+    float getHeight()
+    {
+        float height = ur.y - ll.y;
+        assert(height > 0);
+        return height;
+    }
+    POS_2D getCenter()
+    {
+        POS_2D center = ll;
+        center.x += 0.5 * this->getWidth();
+        center.y += 0.5 * this->getHeight();
+        return center;
+    }
 };
 
 inline float float_mul(float a, float b) // a*b
@@ -260,10 +279,18 @@ inline double seconds()
 
 inline void segmentFaultCP(string checkpointname)
 {
-    if (gArg.CheckExist("segDebug"))
+    if (gArg.CheckExist("debug"))
     {
         cout << endl
              << padding << checkpointname << padding << endl;
+    }
+}
+
+inline void debugOutput(string caption, double value)
+{
+    if (gArg.CheckExist("debug"))
+    {
+        cout << caption << ": " << value << endl;
     }
 }
 
@@ -289,7 +316,7 @@ inline double getOverlap(double x1, double x2, double x3, double x4) // two line
     assert(x3 <= x4);
 
     // overlapStart: start point of the overlap line
-    double overlapStart= max(x1, x3);
+    double overlapStart = max(x1, x3);
     double overlapEnd = min(x2, x4);
 
     if (overlapStart >= overlapEnd)
