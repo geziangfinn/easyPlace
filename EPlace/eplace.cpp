@@ -6,6 +6,13 @@ void EPlacer_2D::setTargetDensity(float target)
     cout << padding << "Target density set: " << padding << endl;
 }
 
+void EPlacer_2D::initialization()
+{
+    fillerInitialization();
+    binInitialization();
+    gradientVectorInitialization();
+}
+
 void EPlacer_2D::fillerInitialization()
 {
     segmentFaultCP("fillerInit");
@@ -62,7 +69,7 @@ void EPlacer_2D::fillerInitialization()
     ePlaceStdCellArea = stdcellArea;
     ePlaceMacroArea = macroArea;
 
-    nodeAreaScaled = stdcellArea + macroArea * targetDensity; // see ePlace paper equation (13), Am is nodeArea here
+    nodeAreaScaled = stdcellArea + macroArea * targetDensity; // see ePlace paper equation (13), Am is nodeArea here. or see RePlAce code opt.cpp line 86, total_modu_area equals nodeAreaScaled here
     //??? macro area should *= target density when calculating Am in(13)? see RePlAce code opt.cpp line 86 But terminal area wasn't *= target density when calculating Aws??? implement as this for now
 
     ////////////////////////////////////////////////////////////////
@@ -73,9 +80,6 @@ void EPlacer_2D::fillerInitialization()
     totalFillerArea = whitespaceArea * targetDensity - nodeAreaScaled; //! see ePlace paper (13)
 
     int nodeCount = db->dbNodes.size();
-
-    int minIdx = (int)(0.05 * (float)nodeCount); //! for calculating average area of the middle 90% of all nodes(cells and macros)
-    int maxIdx = (int)(0.95 * (float)nodeCount);
 
     vector<float> nodeArea; // sort node according to area with this because we don't want to sort dbNodes
     nodeArea.resize(nodeCount);
@@ -89,17 +93,19 @@ void EPlacer_2D::fillerInitialization()
 
     sort(nodeArea.begin(), nodeArea.end()); //! sort by area
 
-    float avg90TotalArea = 0;
-    float avg90NodeArea = 0;
+    float avg80TotalArea = 0;
+    float avg80NodeArea = 0;
+    int minIdx = (int)(0.10 * (float)nodeCount); //! for calculating average area of the middle 80% of all nodes(cells and macros)
+    int maxIdx = (int)(0.90 * (float)nodeCount);
 
     for (int i = minIdx; i < maxIdx; i++)
     {
-        avg90TotalArea += nodeArea[i];
+        avg80TotalArea += nodeArea[i];
     }
 
-    avg90NodeArea = avg90TotalArea / ((float)(maxIdx - minIdx));
+    avg80NodeArea = avg80TotalArea / ((float)(maxIdx - minIdx));
 
-    float fillerArea = avg90NodeArea; //! use average area of the middle 90% of all nodes as filler area!
+    float fillerArea = avg80NodeArea; //! use average area of the middle 90% of all nodes as filler area! see ePlace paper, filler insertion
     float fillerHeight = db->commonRowHeight;
     float fillerWidth = float_div(fillerArea, fillerHeight);
 
@@ -118,14 +124,14 @@ void EPlacer_2D::fillerInitialization()
     {
         string name = "f" + to_string(i);
         Module *curFiller = new Module(i, name, fillerWidth, fillerHeight, false, false);
-        curFiller->isFiller = true;
+        curFiller->isFiller = true; //!
         ePlaceFillers[i] = curFiller;
 
         db->setModuleLocation_2D_random(curFiller);
     }
 
-    ePlaceNodes = db->dbNodes;
-    ePlaceNodes.insert(ePlaceNodes.end(), ePlaceFillers.begin(), ePlaceFillers.end());
+    ePlaceNodesAndFillers = db->dbNodes;
+    ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end());
     // macro density scaling in density computation: RePlace bin.cpp line 1853
     // terminal(fixed macro) density scaling in density computation?: RePlace bin.cpp line 480
 
@@ -284,7 +290,7 @@ void EPlacer_2D::binInitialization()
             debugOutput("Available area", curBinAvailableArea);
             if (float_equal(bins[i][j]->area, curBinAvailableArea))
             {
-                bins[i][j]->baseDensity=0;
+                bins[i][j]->baseDensity = 0;
             }
             else
             {
@@ -294,10 +300,83 @@ void EPlacer_2D::binInitialization()
     }
 }
 
+void EPlacer_2D::gradientVectorInitialization()
+{
+    wirelengthGradient.resize(db->dbNodes.size()); // fillers has no wirelength gradient
+    densityGradient.resize(ePlaceNodesAndFillers.size());
+}
+
+void EPlacer_2D::densityOverflowUpdate()
+{
+    float globalOverflowArea = 0;
+    float nodeAreaScaled = ePlaceStdCellArea + ePlaceMacroArea * targetDensity;
+    float invertedBinArea = 1.0 / (binStep.x * binStep.y); // 1/bin area
+    for (int i = 0; i < binDimension.x; i++)
+    {
+        for (int j = 0; j < binDimension.y; j++)
+        {
+            // nodeDensity+terminalDensity+baseDensity because filler density are not included
+            globalOverflowArea += max(float(0.0), (bins[i][j]->nodeDensity + bins[i][j]->terminalDensity + bins[i][j]->baseDensity) * invertedBinArea - targetDensity) * bins[i][j]->area;
+        }
+    }
+    globalDensityOverflow = globalOverflowArea / nodeAreaScaled; // see RePlAce code bin.cpp line 1183, opt.cpp line 86. And nodeAreaScaled in fillerInitialization() in this file
+}
+
+void EPlacer_2D::wirelengthDensityUpdate()
+{
+    ////////////////////////////////////////////////////////////////
+    //! Step1: calculate gamma, see ePlace paper equation 38, RePlace code wlen.cpp line 141
+    ////////////////////////////////////////////////////////////////
+    // first, calculate tau(density overflow)
+    densityOverflowUpdate();
+
+    //! now calculate gamma with the updated tau, here we actually calculate 1/gamma for furthurer calculation
+    VECTOR_2D baseWirelengthCoef;
+    baseWirelengthCoef.x = baseWirelengthCoef.y = 0.125;     // 0.125=1/8.0, 8.0:see ePlace paper equation 38. Notice that baseWirelngthCoef
+                                                             // is wcof00_org in RePlace code wlen.cpp,
+                                                             // and is tuned according to input benchmark in RePlAce main.cpp
+    baseWirelengthCoef.x = baseWirelengthCoef.x / binStep.x; // binStep: wb in ePlace paper equation 38, 1/8/wb=1/8.0wb
+    baseWirelengthCoef.y = baseWirelengthCoef.y / binStep.y;
+
+    if (globalDensityOverflow > 1.0)
+    {
+        baseWirelengthCoef.x *= 0.1;
+        baseWirelengthCoef.y *= 0.1;
+    }
+    else if (globalDensityOverflow < 0.1)
+    {
+        baseWirelengthCoef.x *= 10.0;
+        baseWirelengthCoef.y *= 10.0;
+    }
+    else
+    {
+        float temp;
+        temp = 1.0 / pow(10.0, (globalDensityOverflow - 0.1) * 20 / 9.0 - 1.0); //! see eplace paper equation 38
+        baseWirelengthCoef.x *= temp;                                           //!(1/8.0wb)*(1/10^(k*tau+b)), where k=20/9 and b=-11/9
+        baseWirelengthCoef.y *= temp;
+    }
+
+    invertedGamma = baseWirelengthCoef;
+
+    ////////////////////////////////////////////////////////////////
+    //! Step2: calculate wirelength density for each nodes (not filler nodes)
+    ////////////////////////////////////////////////////////////////
+}
+
 void EPlacer_2D::binNodeDensityUpdate()
 {
+    //!!!! clear nodeDensity for each bin before update!
+    for (int i = 0; i < binDimension.x; i++)
+    {
+        for (int j = 0; j < binDimension.y; j++)
+        {
+            bins[i][j]->nodeDensity = 0;
+            bins[i][j]->fillerDensity = 0;
+        }
+    }
+
     segmentFaultCP("nodeDensity");
-    for (Module *curNode : ePlaceNodes) // ePlaceNodes: nodes and filler nodes
+    for (Module *curNode : ePlaceNodesAndFillers) // ePlaceNodes: nodes and filler nodes
     {
         bool localSmooth = false;
         bool macroDensityScaling = false; // density scaling, see ePlace paper
@@ -314,7 +393,7 @@ void EPlacer_2D::binNodeDensityUpdate()
         {
             //! beware: local smooth on x and y dimension!
             //! binStart and binEnd should be calculated with inflated cell width and height, see replace bin.cpp line 1807
-            POS_2D cellCenter = rectForCurNode.getCenter();
+            POS_3D cellCenter = curNode->getCenter();
 
             if (float_less(curNode->getWidth(), binStep.x))
             {
@@ -369,7 +448,15 @@ void EPlacer_2D::binNodeDensityUpdate()
                 }
                 else
                 {
-                    bins[i][j]->nodeDensity += localSmoothLengthScale.x * localSmoothLengthScale.y * overlapArea;
+                    if (curNode->isFiller)
+                    {
+                        //? does filler need localSmooth?
+                        bins[i][j]->fillerDensity += localSmoothLengthScale.x * localSmoothLengthScale.y * overlapArea;
+                    }
+                    else
+                    {
+                        bins[i][j]->nodeDensity += localSmoothLengthScale.x * localSmoothLengthScale.y * overlapArea;
+                    }
                 }
             }
         }

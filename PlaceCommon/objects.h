@@ -89,7 +89,7 @@ public:
         name = _name;
         width = _width;
         height = _height;
-        area = float_mul(width, height);//! area calculated here!
+        area = float_mul(width, height); //! area calculated here!
         isFixed = _isFixed;
         isNI = _isNI; // 2022-05-13 (frank)
         idx = _index;
@@ -163,6 +163,8 @@ class Row
                                                         height(_height),
                                                         step(_step)
     {
+        start.SetZero();
+        end.SetZero();
     }
     double bottom;
     double height;
@@ -190,6 +192,9 @@ public:
                                                             step(_step),
                                                             orientation(OR_N)
     {
+        intervals.clear();
+        start.SetZero();
+        end.SetZero();
     }
 
     double bottom;         // The bottom y coordinate of this SiteRow of sites

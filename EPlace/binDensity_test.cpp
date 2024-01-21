@@ -38,5 +38,5 @@ int main(int argc, char *argv[])
     eplacer->setTargetDensity(0.9);
     eplacer->fillerInitialization();
     eplacer->binInitialization();
-    eplacer->binNodeDensityUpdate();
+    // eplacer->binNodeDensityUpdate();
 }
