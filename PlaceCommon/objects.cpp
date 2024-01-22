@@ -21,18 +21,28 @@ double Net::calcNetHPWL()
     double minX = DOUBLE_MAX;
     double maxY = DOUBLE_MIN;
     double minY = DOUBLE_MAX;
+    double maxZ = DOUBLE_MIN;
+    double minZ = DOUBLE_MAX;
 
     double curX;
     double curY;
+    double curZ;
     double HPWL;
     for (Pin *curPin : netPins)
     {
         curX = curPin->getAbsolutePos().x;
         curY = curPin->getAbsolutePos().y;
+        curZ = curPin->getAbsolutePos().z;
         minX = min(minX, curX);
         maxX = max(maxX, curX);
         minY = min(minY, curY);
         maxY = max(maxY, curY);
+        minZ = min(minZ, curZ);
+        maxZ = max(maxY, curZ);
+    }
+    if (!gArg.CheckExist("3DIC"))
+    {
+        assert(maxZ == minZ == 0);
     }
     HPWL = ((maxX - minX) + (maxY - minY));
     return HPWL;
@@ -44,15 +54,19 @@ double Net::calcBoundPin()
     double minX = DOUBLE_MAX;
     double maxY = DOUBLE_MIN;
     double minY = DOUBLE_MAX;
+    double maxZ = DOUBLE_MIN;
+    double minZ = DOUBLE_MAX;
 
     double curX;
     double curY;
+    double curZ;
     double HPWL;
 
     for (Pin *curPin : netPins)
     {
         curX = curPin->getAbsolutePos().x;
         curY = curPin->getAbsolutePos().y;
+        curZ = curPin->getAbsolutePos().z;
 
         if (curX < minX)
         {
@@ -77,9 +91,24 @@ double Net::calcBoundPin()
             maxY = curY;
             boundPinYmax = curPin;
         }
-    }
 
-    HPWL = ((maxX - minX) + (maxY - minY));
+        if (curZ < minZ)
+        {
+            minZ = curZ;
+            boundPinZmin = curPin;
+        }
+
+        if (curZ > maxZ)
+        {
+            maxZ = curZ;
+            boundPinZmax = curPin;
+        }
+    }
+    if (!gArg.CheckExist("3DIC"))
+    {
+        assert(maxZ == minZ == 0);
+    }
+    HPWL = ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
     return HPWL;
 }
 
@@ -89,6 +118,13 @@ void Net::clearBoundPins()
     boundPinXmin = NULL;
     boundPinYmax = NULL;
     boundPinYmin = NULL;
+    boundPinZmax = NULL;
+    boundPinZmin = NULL;
+}
+
+VECTOR_2D Net::getWirelengthGradientWA_2D(Pin *)
+{
+    return VECTOR_2D();
 }
 
 POS_3D Pin::getAbsolutePos()
@@ -183,7 +219,7 @@ POS_2D SiteRow::getLL_2D()
 
 POS_2D SiteRow::getUR_2D()
 {
-    POS_2D ur_2D=end;
-    ur_2D.y+=height;
+    POS_2D ur_2D = end;
+    ur_2D.y += height;
     return ur_2D;
 }

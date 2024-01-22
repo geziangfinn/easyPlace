@@ -1,6 +1,7 @@
 #include "global.h"
 #include "objects.h"
 #include "placedb.h"
+#include "fft.h"
 class Bin_2D;
 class Bin_3D; // call it cube?
 class EPlacer_2D;
@@ -79,6 +80,7 @@ public:
 
     vector<VECTOR_2D> wirelengthGradient; // store wirelength gradient for nodes only(wirelength gradient for filler is always 0)
     vector<VECTOR_2D> densityGradient;    // store density gradient for fillers nodes (wirelength gradient for filler node is always 0)
+    vector<VECTOR_2D> totalGradient;// total gradient of objective function f including gradients of all components
 
     float targetDensity;         //!!!!!! so important
     float globalDensityOverflow; // !!!!! so important, tau
@@ -113,7 +115,8 @@ public:
     void gradientVectorInitialization();
 
     void densityOverflowUpdate();
-    void wirelengthDensityUpdate();
+    void wirelengthGradientUpdate();
+    void densityGradientUpdate();
 
     void binNodeDensityUpdate(); //! only consider density from movable modules(nodes) in this function, because terminal density only needed to be calculated once, in binInitializaton()
 

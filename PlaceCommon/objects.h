@@ -35,6 +35,8 @@ public:
     Pin *boundPinXmax;
     Pin *boundPinYmin;
     Pin *boundPinYmax;
+    Pin* boundPinZmin;// for 3D
+    Pin* boundPinZmax;// for 3D
 
     void addPin(Pin *);
     int getPinCount();
@@ -42,6 +44,8 @@ public:
     double calcNetHPWL();
     double calcBoundPin();
     void clearBoundPins();
+    void calcWirelengthWA();
+    VECTOR_2D getWirelengthGradientWA_2D(Pin*);
 };
 
 class Pin

@@ -131,7 +131,7 @@ void EPlacer_2D::fillerInitialization()
     }
 
     ePlaceNodesAndFillers = db->dbNodes;
-    ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end());
+    ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end());//! fillers are stored after nodes in the vector
     // macro density scaling in density computation: RePlace bin.cpp line 1853
     // terminal(fixed macro) density scaling in density computation?: RePlace bin.cpp line 480
 
@@ -304,6 +304,7 @@ void EPlacer_2D::gradientVectorInitialization()
 {
     wirelengthGradient.resize(db->dbNodes.size()); // fillers has no wirelength gradient
     densityGradient.resize(ePlaceNodesAndFillers.size());
+    totalGradient.resize(ePlaceNodesAndFillers.size());
 }
 
 void EPlacer_2D::densityOverflowUpdate()
@@ -322,7 +323,7 @@ void EPlacer_2D::densityOverflowUpdate()
     globalDensityOverflow = globalOverflowArea / nodeAreaScaled; // see RePlAce code bin.cpp line 1183, opt.cpp line 86. And nodeAreaScaled in fillerInitialization() in this file
 }
 
-void EPlacer_2D::wirelengthDensityUpdate()
+void EPlacer_2D::wirelengthGradientUpdate()
 {
     ////////////////////////////////////////////////////////////////
     //! Step1: calculate gamma, see ePlace paper equation 38, RePlace code wlen.cpp line 141
@@ -361,6 +362,140 @@ void EPlacer_2D::wirelengthDensityUpdate()
     ////////////////////////////////////////////////////////////////
     //! Step2: calculate wirelength density for each nodes (not filler nodes)
     ////////////////////////////////////////////////////////////////
+    // When using weighted-average wirelength model we would need X/Y/Z max and min in a net, so update X/Y/Z max and min in a net first, see ntuplace3D paper page 6: Stable Weighted-Average Wirelength Model
+    double HPWL=db->calcNetBoundPins();
+    int index=0;
+    for(Module* curNode:db->dbNodes)// use ePlaceNodesAndFillers?
+    {
+        assert(curNode->idx==index);
+        for(Pin* curPin:curNode->modulePins)
+        {
+            VECTOR_2D gradient;
+            gradient=curPin->net->getWirelengthGradientWA_2D(curPin);
+            wirelengthGradient[index].x+=gradient.x;
+            wirelengthGradient[index].y+=gradient.y;
+            //get the wirelength gradient of this pin
+        }
+        index++;   
+    }
+}
+
+void EPlacer_2D::densityGradientUpdate()
+{
+    ////////////////////////////////////////////////////////////////
+    //! Step1: obtain electric field(e) through FFT
+    ////////////////////////////////////////////////////////////////
+    replace::FFT_2D fft(binDimension.x, binDimension.y, binStep.x, binStep.y);
+    float invertedBinArea = 1.0 / (binStep.x * binStep.y);
+    for (int i = 0; i < binDimension.x; i++)
+    {
+        for (int j = 0; j < binDimension.y; j++)
+        {
+            float eDensity = bins[i][j]->nodeDensity + bins[i][j]->baseDensity + bins[i][j]->fillerDensity + bins[i][j]->terminalDensity; // consider filler area(density) here
+            eDensity *= invertedBinArea;
+            fft.updateDensity(i, j, eDensity);
+        }
+    }
+    fft.doFFT();
+    for (int i = 0; i < binDimension.x; i++)
+    {
+        for (int j = 0; j < binDimension.y; j++)
+        {
+            auto eForcePair = fft.getElectroForce(i, j);
+            bins[i][j]->E.x = eForcePair.first;
+            bins[i][j]->E.y = eForcePair.second;
+            // std::cout<<"bin eforce x and y "<<Bins[i][j].Eforce.x<<" "<<Bins[i][j].Eforce.y<<std::endl;
+            float electroPhi = fft.getElectroPhi(i, j);
+            bins[i][j]->phi = electroPhi;
+        }
+        // sumPhi_ += electroPhi*static_cast<float>(bin->nonPlaceArea()+bin->instPlacedArea()+bin->fillerArea());
+    }
+
+    ////////////////////////////////////////////////////////////////
+    //! Step2: calculate density(potential) gradient, see ePlace paper equation 16, RePlace charge.cpp line 451
+    ////////////////////////////////////////////////////////////////
+    int nodeCount = db->dbNodes.size();
+    int index = 0;
+    for (Module *curNode : ePlaceNodesAndFillers)
+    {
+        assert(index == curNode->idx);
+
+        VECTOR_2D localSmoothLengthScale; // see ePlace paper page 15 or RePlace opt.cpp line 1460
+        localSmoothLengthScale.x = 1;
+        localSmoothLengthScale.y = 1;
+
+        CRect rectForCurNode;
+        rectForCurNode.ll = curNode->getLL_2D();
+        rectForCurNode.ur = curNode->getUR_2D();
+
+        //! beware: local smooth on x and y dimension, also needed here!
+        //! binStart and binEnd should be calculated with inflated cell width and height, see replace charge.cpp line 408
+        POS_3D cellCenter = curNode->getCenter();
+
+        if (!curNode->isMacro)
+        {
+            if (float_less(curNode->getWidth(), binStep.x))
+            {
+                localSmoothLengthScale.x = curNode->getWidth() / binStep.x;
+                rectForCurNode.ll.x = cellCenter.x - 0.5 * binStep.x;
+                rectForCurNode.ur.x = cellCenter.x + 0.5 * binStep.x;
+            }
+            if (float_less(curNode->getHeight(), binStep.y))
+            {
+                localSmoothLengthScale.y = curNode->getHeight() / binStep.y;
+                rectForCurNode.ll.y = cellCenter.y - 0.5 * binStep.y;
+                rectForCurNode.ur.y = cellCenter.y + 0.5 * binStep.y;
+            }
+        }
+
+        VECTOR_2D_INT binStartIdx; // binStartIdx: index the index of the first bin that has overlap with a cell on X/Y direction
+        VECTOR_2D_INT binEndIdx;
+        binStartIdx.x = INT_DOWN((rectForCurNode.ll.x - db->coreRegion.ll.x) / binStep.x);
+        binEndIdx.x = INT_DOWN((rectForCurNode.ur.x - db->coreRegion.ll.x) / binStep.x);
+
+        binStartIdx.y = INT_DOWN((rectForCurNode.ll.y - db->coreRegion.ll.y) / binStep.y);
+        binEndIdx.y = INT_DOWN((rectForCurNode.ur.y - db->coreRegion.ll.y) / binStep.y);
+
+        assert(binStartIdx.x >= 0);
+        assert(binEndIdx.x >= 0);
+        assert(binStartIdx.y >= 0);
+        assert(binEndIdx.y >= 0);
+
+        if (binEndIdx.y >= binDimension.y)
+        {
+            binEndIdx.y = binDimension.y - 1;
+        }
+
+        if (binEndIdx.x >= binDimension.x)
+        {
+            binEndIdx.x = binDimension.x - 1;
+        }
+
+        //! beware: local smooth and density scaling!
+        for (int i = binStartIdx.x; i <= binEndIdx.x; i++)
+        {
+            for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
+            {
+                float overlapArea = localSmoothLengthScale.x * localSmoothLengthScale.y * getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
+                if (curNode->isFiller)
+                {
+                    densityGradient[nodeCount + index].x += overlapArea * bins[i][j]->E.x;
+                    densityGradient[nodeCount + index].y += overlapArea * bins[i][j]->E.y;
+                }
+                else
+                {
+                    densityGradient[index].x += overlapArea * bins[i][j]->E.x;
+                    densityGradient[index].y += overlapArea * bins[i][j]->E.y;
+                }
+            }
+        }
+
+        index++;
+        if (index == nodeCount)
+        {
+            index = 0;
+        }
+    }
 }
 
 void EPlacer_2D::binNodeDensityUpdate()
