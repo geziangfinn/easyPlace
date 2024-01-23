@@ -20,6 +20,7 @@ const string padding(30, '=');
 #define DOUBLE_MIN __DBL_MIN__
 #define INT_CONVERT(a) (int)(1.0 * (a) + 0.5f)
 #define INT_DOWN(a) (int)(a)
+#define NEGATIVE_MAX_EXP -300
 //! The followings are colors used for log(in shell)
 #define RESET "\033[0m"
 #define BLACK "\033[30m"              /* Black */
@@ -131,6 +132,10 @@ struct VECTOR_2D
 {
     float x;
     float y;
+    VECTOR_2D()
+    {
+        SetZero();
+    }
     inline void SetZero()
     {
         x = y = 0;
@@ -146,6 +151,10 @@ struct VECTOR_2D_INT
 {
     int x;
     int y;
+    VECTOR_2D_INT()
+    {
+        SetZero();
+    }
     inline void SetZero()
     {
         x = y = 0;
@@ -162,9 +171,37 @@ struct VECTOR_3D
     float x;
     float y;
     float z;
+    VECTOR_3D()
+    {
+        SetZero();
+    }
+    inline void SetZero()
+    {
+        x = y = z = 0;
+    }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_3D &vec)
     {
         os << "[" << vec.x << "," << vec.y << "," << vec.z << "]"; // [] for vectors and () for pos
+        return os;
+    }
+};
+
+struct VECTOR_3D_BOOL
+{
+    bool x;
+    bool y;
+    bool z;
+    VECTOR_3D_BOOL()
+    {
+        SetZero();
+    }
+    inline void SetZero()
+    {
+        x = y = z = false;
+    }
+    friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_3D_BOOL &vec)
+    {
+        os << "b " << vec.x << "," << vec.y << "," << vec.z << " b"; // [] for vectors and () for pos
         return os;
     }
 };

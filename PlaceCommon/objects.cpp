@@ -44,7 +44,7 @@ double Net::calcNetHPWL()
     {
         assert(maxZ == minZ == 0);
     }
-    HPWL = ((maxX - minX) + (maxY - minY));
+    HPWL = ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
     return HPWL;
 }
 
@@ -122,9 +122,156 @@ void Net::clearBoundPins()
     boundPinZmin = NULL;
 }
 
-VECTOR_2D Net::getWirelengthGradientWA_2D(Pin *)
+double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
 {
-    return VECTOR_2D();
+    VECTOR_2D numeratorMax;
+    VECTOR_2D denominatorMax;
+    VECTOR_2D numeratorMin;
+    VECTOR_2D denominatorMin;
+
+    //! WA wirelength model, see NTUPlace 3D paper page 6 : Stable Weighted-Average Wirelength Model
+    //! Here on X/Y dimension: WA wirelength = numeratorMax/denominatorMax - numeratorMin/denominatorMin, total wirelength = wirelength on X dimension + wirelength on Y dimension
+    //! numerator and denominator are sum of the results of all pins, see the code below
+
+    numeratorMax.SetZero();
+    denominatorMax.SetZero();
+    numeratorMin.SetZero();
+    denominatorMin.SetZero();
+
+    float pinMaxX = boundPinXmax->getAbsolutePos().x;
+    float pinMaxY = boundPinYmax->getAbsolutePos().y;
+    float pinMaxZ = boundPinZmax->getAbsolutePos().z;
+
+    float pinMinX = boundPinXmin->getAbsolutePos().x;
+    float pinMinY = boundPinYmin->getAbsolutePos().y;
+    float pinMinZ = boundPinZmin->getAbsolutePos().z;
+
+    for (Pin *curPin : netPins)
+    {
+        POS_3D pinPosition = curPin->getAbsolutePos();
+        VECTOR_2D expMax;                                       // (Xi-Xmax)/gamma in WA model (X/Y/Z)
+        VECTOR_2D expMin;                                       // (Xmin-Xi)/gamma in WA model (X/Y/Z)
+        expMax.x = (pinPosition.x - pinMaxX) * invertedGamma.x; //! wlen_cof is actually 1/gamma
+        expMin.x = (pinMinX - pinPosition.x) * invertedGamma.x; //! wlen_cof used here!
+        expMax.y = (pinPosition.y - pinMaxY) * invertedGamma.y;
+        expMin.y = (pinMinY - pinPosition.y) * invertedGamma.y;
+        // cout<<padding<<"expmax: "<<exp_max_x<<endl;
+        if (expMax.x > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMax_WA.x = fastExp(expMax.x);
+            numeratorMax.x += pinPosition.x * curPin->eMax_WA.x;
+            denominatorMax.x += curPin->eMax_WA.x;
+            curPin->expZeroFlgMax_WA.x = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMax_WA.x = true;
+        }
+
+        if (expMin.x > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMin_WA.x = fastExp(expMin.x);
+            numeratorMin.x += pinPosition.x * curPin->eMin_WA.x;
+            denominatorMin.x += curPin->eMin_WA.x;
+            curPin->expZeroFlgMin_WA.x = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMin_WA.x = true;
+        }
+
+        if (expMax.y > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMax_WA.y = fastExp(expMax.y);
+            numeratorMax.y += pinPosition.y * curPin->eMax_WA.y;
+            denominatorMax.y += curPin->eMax_WA.y;
+            curPin->expZeroFlgMax_WA.y = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMax_WA.y = true;
+        }
+
+        if (expMin.y > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMin_WA.y = fastExp(expMin.y);
+            numeratorMin.y += pinPosition.y * curPin->eMin_WA.y;
+            denominatorMin.y += curPin->eMin_WA.y;
+            curPin->expZeroFlgMin_WA.y = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMin_WA.y = true;
+        }
+    }
+
+    numeratorMax_WA.x = numeratorMax.x;
+    numeratorMax_WA.y = numeratorMax.y;
+    denominatorMax_WA.x = denominatorMax.x;
+    denominatorMax_WA.y = denominatorMax.y;
+
+    numeratorMin_WA.x = numeratorMin.x;
+    numeratorMin_WA.y = numeratorMin.y;
+    denominatorMin_WA.x = denominatorMin.x;
+    denominatorMin_WA.y = denominatorMin.y;
+
+    return (numeratorMax_WA.x / denominatorMax_WA.x - numeratorMin_WA.x / denominatorMin_WA.x) + (numeratorMax_WA.y / denominatorMax_WA.y - numeratorMin_WA.y / denominatorMin_WA.y);
+}
+
+VECTOR_2D Net::getWirelengthGradientWA_2D(VECTOR_2D invertedGamma, Pin *curPin)
+{
+    VECTOR_2D gradientOnCurrentPin;
+
+    VECTOR_2D gradientNumeratorMax;
+    VECTOR_2D gradientDenominatorMax;
+    VECTOR_2D gradientNumeratorMin;
+    VECTOR_2D gradientDenominatorMin;
+    VECTOR_2D gradientMax;
+    VECTOR_2D gradientMin;
+    // ? no SetZero here (called in default constructor)
+    assert(gradientOnCurrentPin.x == gradientDenominatorMin.y == 0);
+
+    POS_3D curPinPosition = curPin->getAbsolutePos();
+
+    if (!curPin->expZeroFlgMax_WA.x)
+    { // if flg=0, assume grad=0
+        gradientDenominatorMax.x = invertedGamma.x * curPin->eMax_WA.x;
+        gradientNumeratorMax.x = curPin->eMax_WA.x + curPinPosition.x * gradientDenominatorMax.x;
+        gradientMax.x =
+            (gradientNumeratorMax.x * denominatorMax_WA.x - gradientDenominatorMax.x * numeratorMax_WA.x) /
+            (denominatorMax_WA.x * denominatorMax_WA.x);
+    }
+
+    if (!curPin->expZeroFlgMax_WA.y)
+    {
+        gradientDenominatorMax.y = invertedGamma.y * curPin->eMax_WA.y;
+        gradientNumeratorMax.y = curPin->eMax_WA.y + curPinPosition.y * gradientDenominatorMax.y;
+        gradientMax.y =
+            (gradientNumeratorMax.y * denominatorMax_WA.y - gradientDenominatorMax.y * numeratorMax_WA.y) /
+            (denominatorMax_WA.y * denominatorMax_WA.y);
+    }
+
+    if (!curPin->expZeroFlgMin_WA.x)
+    {
+        gradientDenominatorMin.x = invertedGamma.x * curPin->eMin_WA.x;
+        gradientNumeratorMin.x = curPin->eMin_WA.x - curPinPosition.x * gradientDenominatorMin.x;
+        gradientMin.x =
+            (gradientNumeratorMin.x * denominatorMin_WA.x + gradientDenominatorMin.x * numeratorMin_WA.x) /
+            (denominatorMin_WA.x * denominatorMin_WA.x);
+    }
+
+    if (!curPin->expZeroFlgMin_WA.y)
+    {
+        gradientDenominatorMin.y = invertedGamma.y * curPin->eMin_WA.y;
+        gradientNumeratorMin.y = curPin->eMin_WA.y - curPinPosition.y * gradientDenominatorMin.y;
+        gradientMin.y =
+            (gradientNumeratorMin.y * denominatorMin_WA.y + gradientDenominatorMin.y * numeratorMin_WA.y) /
+            (denominatorMin_WA.y * denominatorMin_WA.y);
+    }
+
+    gradientOnCurrentPin.x = gradientMax.x - gradientMin.x;
+    gradientOnCurrentPin.y = gradientMax.y - gradientMin.y;
+    return gradientOnCurrentPin;
 }
 
 POS_3D Pin::getAbsolutePos()

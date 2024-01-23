@@ -197,6 +197,16 @@ double PlaceDB::calcHPWL() //! parallel this?
     return HPWL;
 }
 
+double PlaceDB::calcWA_Wirelength_2D(VECTOR_2D invertedGamma)
+{
+    double WA = 0;
+        for (Net *curNet : dbNets)
+    {
+        WA += curNet->calcWirelengthWA_2D(invertedGamma);
+    }
+    return WA;
+}
+
 double PlaceDB::calcNetBoundPins()
 {
     double HPWL = 0;

@@ -123,7 +123,7 @@ void EPlacer_2D::fillerInitialization()
     for (int i = 0; i < fillerCount; i++)
     {
         string name = "f" + to_string(i);
-        Module *curFiller = new Module(i, name, fillerWidth, fillerHeight, false, false);
+        Module *curFiller = new Module(i + nodeCount, name, fillerWidth, fillerHeight, false, false);
         curFiller->isFiller = true; //!
         ePlaceFillers[i] = curFiller;
 
@@ -131,7 +131,7 @@ void EPlacer_2D::fillerInitialization()
     }
 
     ePlaceNodesAndFillers = db->dbNodes;
-    ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end());//! fillers are stored after nodes in the vector
+    ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end()); //! fillers are stored after nodes in the vector
     // macro density scaling in density computation: RePlace bin.cpp line 1853
     // terminal(fixed macro) density scaling in density computation?: RePlace bin.cpp line 480
 
@@ -362,21 +362,26 @@ void EPlacer_2D::wirelengthGradientUpdate()
     ////////////////////////////////////////////////////////////////
     //! Step2: calculate wirelength density for each nodes (not filler nodes)
     ////////////////////////////////////////////////////////////////
-    // When using weighted-average wirelength model we would need X/Y/Z max and min in a net, so update X/Y/Z max and min in a net first, see ntuplace3D paper page 6: Stable Weighted-Average Wirelength Model
-    double HPWL=db->calcNetBoundPins();
-    int index=0;
-    for(Module* curNode:db->dbNodes)// use ePlaceNodesAndFillers?
+    // When using weighted-average wirelength model we would need X/Y/Z max and min in a net,
+    // so update X/Y/Z max and min in all nets first, see ntuplace3D paper page 6: Stable Weighted-Average Wirelength Model
+    // Also the numerators and denominators are pre-calculated for all nets for further use
+    double HPWL = db->calcNetBoundPins();
+    double WA = db->calcWA_Wirelength_2D(invertedGamma);
+
+    int index = 0;
+    for (Module *curNode : db->dbNodes) // use ePlaceNodesAndFillers?
     {
-        assert(curNode->idx==index);
-        for(Pin* curPin:curNode->modulePins)
+        assert(curNode->idx == index);
+        wirelengthGradient[index].SetZero(); //! clear before updating
+        for (Pin *curPin : curNode->modulePins)
         {
             VECTOR_2D gradient;
-            gradient=curPin->net->getWirelengthGradientWA_2D(curPin);
-            wirelengthGradient[index].x+=gradient.x;
-            wirelengthGradient[index].y+=gradient.y;
-            //get the wirelength gradient of this pin
+            gradient = curPin->net->getWirelengthGradientWA_2D(invertedGamma, curPin);
+            wirelengthGradient[index].x += gradient.x;
+            wirelengthGradient[index].y += gradient.y;
+            // get the wirelength gradient of this pin
         }
-        index++;   
+        index++;
     }
 }
 
@@ -419,6 +424,8 @@ void EPlacer_2D::densityGradientUpdate()
     for (Module *curNode : ePlaceNodesAndFillers)
     {
         assert(index == curNode->idx);
+        //! clear before updating
+        densityGradient[index].SetZero();
 
         VECTOR_2D localSmoothLengthScale; // see ePlace paper page 15 or RePlace opt.cpp line 1460
         localSmoothLengthScale.x = 1;
@@ -477,24 +484,37 @@ void EPlacer_2D::densityGradientUpdate()
             for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
             {
                 float overlapArea = localSmoothLengthScale.x * localSmoothLengthScale.y * getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
-                if (curNode->isFiller)
-                {
-                    densityGradient[nodeCount + index].x += overlapArea * bins[i][j]->E.x;
-                    densityGradient[nodeCount + index].y += overlapArea * bins[i][j]->E.y;
-                }
-                else
-                {
-                    densityGradient[index].x += overlapArea * bins[i][j]->E.x;
-                    densityGradient[index].y += overlapArea * bins[i][j]->E.y;
-                }
+
+                densityGradient[index].x += overlapArea * bins[i][j]->E.x;
+                densityGradient[index].y += overlapArea * bins[i][j]->E.y;
             }
         }
 
         index++;
-        if (index == nodeCount)
+    }
+}
+
+void EPlacer_2D::totalGradientUpdate(float lambda)
+{
+    int index = 0;
+    for (Module *curNodeOrFiller : ePlaceNodesAndFillers)
+    {
+        totalGradient[index].SetZero();
+        assert(index == curNodeOrFiller->idx);
+        // calculate -gradient here
+        if (curNodeOrFiller->isFiller)
         {
-            index = 0;
+            // wirelength gradient of fillers should == 0
+            totalGradient[index].x = lambda * densityGradient[index].x;
+            totalGradient[index].y = lambda * densityGradient[index].y;
         }
+        else
+        {
+            totalGradient[index].x = lambda * densityGradient[index].x - wirelengthGradient[index].x;
+            totalGradient[index].y = lambda * densityGradient[index].y - wirelengthGradient[index].y;
+        }
+
+        index++;
     }
 }
 

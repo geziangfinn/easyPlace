@@ -19,14 +19,12 @@ class Net
 public:
     Net()
     {
-        idx = 0;
-        clearBoundPins();
+        init();
     }
     Net(int index)
     {
+        init();
         idx = index;
-        netPins.clear();
-        clearBoundPins();
     }
     int idx;
     vector<Pin *> netPins;
@@ -35,17 +33,32 @@ public:
     Pin *boundPinXmax;
     Pin *boundPinYmin;
     Pin *boundPinYmax;
-    Pin* boundPinZmin;// for 3D
-    Pin* boundPinZmax;// for 3D
+    Pin *boundPinZmin; // for 3D
+    Pin *boundPinZmax; // for 3D
 
+    VECTOR_3D numeratorMax_WA;
+    VECTOR_3D denominatorMax_WA;
+    VECTOR_3D numeratorMin_WA;
+    VECTOR_3D denominatorMin_WA;
+
+    void init()
+    {
+        idx = 0;
+        netPins.clear();
+        clearBoundPins();
+        numeratorMax_WA.SetZero();
+        denominatorMin_WA.SetZero();
+        numeratorMax_WA.SetZero();
+        denominatorMin_WA.SetZero();
+    }
     void addPin(Pin *);
     int getPinCount();
     void allocateMemoryForPin(int);
     double calcNetHPWL();
     double calcBoundPin();
     void clearBoundPins();
-    void calcWirelengthWA();
-    VECTOR_2D getWirelengthGradientWA_2D(Pin*);
+    double calcWirelengthWA_2D(VECTOR_2D);
+    VECTOR_2D getWirelengthGradientWA_2D(VECTOR_2D, Pin *);
 };
 
 class Pin
@@ -53,18 +66,27 @@ class Pin
 public:
     Pin()
     {
+        init();
+    }
+    Pin(Module *masterModule, Net *masterNet, float x, float y)
+        : direction(PIN_DIRECTION_UNDEFINED)
+    {
+        init();
+        offset = POS_2D(x, y);
+        setModule(masterModule);
+        setNet(masterNet);
+    }
+    void init()
+    {
         idx = -1;
         module = NULL;
         net = NULL;
         offset.SetZero();
         direction = -1;
-    }
-    Pin(Module *masterModule, Net *masterNet, float x, float y)
-        : direction(PIN_DIRECTION_UNDEFINED)
-    {
-        offset = POS_2D(x, y);
-        setModule(masterModule);
-        setNet(masterNet);
+        eMin_WA.SetZero();
+        eMax_WA.SetZero();
+        expZeroFlgMax_WA.SetZero();
+        expZeroFlgMin_WA.SetZero();
     }
     int idx;
     Module *module;
@@ -72,6 +94,12 @@ public:
     POS_2D offset;
     int direction; // 0 output  1 input  -1 not-define
     POS_3D getAbsolutePos();
+
+    VECTOR_3D eMin_WA;               // e^[(Xmin-Xi)/gamma] in WA model (X/Y/Z)
+    VECTOR_3D eMax_WA;               // e^[(Xi-Xmax)/gamma] in WA model (X/Y/Z)
+    VECTOR_3D_BOOL expZeroFlgMax_WA; // indicate if (Xi-Xmax)/gamma is too small that e^[(Xi-Xmax)/gamma] == 0
+    VECTOR_3D_BOOL expZeroFlgMin_WA; // similar
+
     void setId(int);
     void setNet(Net *);
     void setModule(Module *);

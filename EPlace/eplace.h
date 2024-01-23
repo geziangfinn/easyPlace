@@ -117,7 +117,7 @@ public:
     void densityOverflowUpdate();
     void wirelengthGradientUpdate();
     void densityGradientUpdate();
-
+    void totalGradientUpdate(float);
     void binNodeDensityUpdate(); //! only consider density from movable modules(nodes) in this function, because terminal density only needed to be calculated once, in binInitializaton()
 
     //! be aware of density scaling and local smooth in density calculation
