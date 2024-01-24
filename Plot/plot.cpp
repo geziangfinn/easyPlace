@@ -1,7 +1,12 @@
 #include "plot.h"
 using namespace cimg_library;
-void Plotter::plotCurrentPlacement(string imageName, string imagePath)
+void Plotter::setPlotPath(string _plotPath)
 {
+    plotPath=_plotPath;
+}
+void Plotter::plotCurrentPlacement(string imageName)
+{
+    string imagePath=plotPath;
     float chipRegionWidth = db->chipRegion.ur.x - db->chipRegion.ll.x;
     float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
 

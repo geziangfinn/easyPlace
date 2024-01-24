@@ -4,11 +4,12 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <unsupported/Eigen/IterativeSolvers>
 using namespace Eigen;
+void QPPlacer::setPlotter(Plotter *_plotter)
+{
+    plotter = _plotter;
+}
 void QPPlacer::quadraticPlacement()
 {
-    string plotPath;
-    assert(gArg.GetString("plotPath", &plotPath));
-    
     // TESTING, one HPWL can be removed in the future
     db->moveNodesCenterToCenter(); //!!!!!!
 
@@ -21,20 +22,19 @@ void QPPlacer::quadraticPlacement()
     int nodeCount = db->dbNodes.size();
     int maxIterationNumber;
 
-    if(gArg.CheckExist("IPiteCount"))
+    if (gArg.CheckExist("IPiteCount"))
     {
-        gArg.GetInt("IPiteCount",&maxIterationNumber);
+        gArg.GetInt("IPiteCount", &maxIterationNumber);
     }
     else
     {
-        maxIterationNumber=30;
+        maxIterationNumber = 20;
     }
-
 
     float xError, yError;
     float target_error = 0.000001;
 
-    printf("INFO:  initial HPWL: %.6lf\n",HPWL);
+    printf("INFO:  initial HPWL: %.6lf\n", HPWL);
     cout << "INFO:  The matrix size is " << nodeCount << endl; //! matrix size: only nodes(movable modules)
 
     setNbThreads(8); //! a parameter(numThreads) fixed here
@@ -63,9 +63,10 @@ void QPPlacer::quadraticPlacement()
         updateModuleLocation(X_x, Y_x);
         HPWL = db->calcNetBoundPins();
 
-        if (gArg.CheckExist("debug")||gArg.CheckExist("fullPlot"))
+        if (gArg.CheckExist("debug") || gArg.CheckExist("fullPlot"))
         {
-            plotter->plotCurrentPlacement("Initial placement iteration " + to_string(i), plotPath);
+            assert(plotter);
+            plotter->plotCurrentPlacement("Initial placement iteration " + to_string(i));
         }
 
         double qp_time = seconds() - qp_start;
@@ -210,7 +211,6 @@ void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, Vec
 
     X_A.setFromTriplets(tripletListX.begin(), tripletListX.end());
     Y_A.setFromTriplets(tripletListY.begin(), tripletListY.end());
-
 }
 
 void QPPlacer::updateModuleLocation(VectorXf &X_x, VectorXf &Y_x)

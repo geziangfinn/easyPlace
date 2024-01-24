@@ -17,10 +17,12 @@ public:
     {
         db = _db;
     }
-    void plotCurrentPlacement(string imgName,  string imgPath);
+    PlaceDB *db;
+    string plotPath;
+    void setPlotPath(string);
+    void plotCurrentPlacement(string imgName);
     int getX(float, float);
     int getY(float, float);
-    PlaceDB *db;
 };
 
 #endif

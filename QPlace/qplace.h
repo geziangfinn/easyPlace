@@ -23,11 +23,11 @@ public:
     QPPlacer(PlaceDB *_db)
     {
         db = _db;
-        plotter = new Plotter(db);
     }
     PlaceDB *db;
     Plotter *plotter;
 
+    void setPlotter(Plotter*);
     void quadraticPlacement();
 
     void createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, VectorXf &Y_x, VectorXf &X_b, VectorXf &Y_b); //! solve Ax=b for X and Y coordinates. Create A,x and b, see kraftwerk2 for more details

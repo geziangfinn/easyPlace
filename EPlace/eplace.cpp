@@ -486,7 +486,7 @@ void EPlacer_2D::densityGradientUpdate()
             for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
             {
                 float overlapArea = localSmoothLengthScale.x * localSmoothLengthScale.y * getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
-                //????????????????????? watch out: do we need macro density scaling here? it seems RePlAce didn't do that
+                //! ????????????????????? watch out: do we need macro density scaling here? it seems RePlAce didn't do that
                 densityGradient[index].x += overlapArea * bins[i][j]->E.x;
                 densityGradient[index].y += overlapArea * bins[i][j]->E.y;
             }
@@ -546,6 +546,11 @@ float EPlacer_2D::penaltyFactorInitilization()
 
     lambda0 = float_div(numerator, denominator);
     return lambda0;
+}
+
+void EPlacer_2D::setPlotter(Plotter *_plotter)
+{
+    plotter = _plotter;
 }
 
 void EPlacer_2D::binNodeDensityUpdate()
