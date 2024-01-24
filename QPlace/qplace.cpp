@@ -34,7 +34,7 @@ void QPPlacer::quadraticPlacement()
     float xError, yError;
     float target_error = 0.000001;
 
-    cout << "INFO:  The Initial HPWL is " << HPWL << endl;
+    printf("INFO:  initial HPWL: %.6lf\n",HPWL);
     cout << "INFO:  The matrix size is " << nodeCount << endl; //! matrix size: only nodes(movable modules)
 
     setNbThreads(8); //! a parameter(numThreads) fixed here

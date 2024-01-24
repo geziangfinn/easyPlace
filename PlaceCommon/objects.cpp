@@ -17,11 +17,13 @@ void Net::allocateMemoryForPin(int n)
 
 double Net::calcNetHPWL()
 {
-    double maxX = DOUBLE_MIN;
+    double maxX = -DOUBLE_MAX;
     double minX = DOUBLE_MAX;
-    double maxY = DOUBLE_MIN;
+    // double maxY = DOUBLE_MIN;
+    double maxY = -DOUBLE_MAX;
     double minY = DOUBLE_MAX;
-    double maxZ = DOUBLE_MIN;
+    // double maxZ = DOUBLE_MIN;
+    double maxZ = -DOUBLE_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
     double minZ = DOUBLE_MAX;
 
     double curX;
@@ -42,7 +44,9 @@ double Net::calcNetHPWL()
     }
     if (!gArg.CheckExist("3DIC"))
     {
-        assert(maxZ == minZ == 0);
+        //? assert(maxZ == minZ == 0); this causes bug
+        assert(float_equal(maxZ, 0.0));
+        assert(float_equal(minZ, 0.0));
     }
     HPWL = ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
     return HPWL;
@@ -51,13 +55,13 @@ double Net::calcNetHPWL()
 double Net::calcBoundPin()
 {
     // double maxX = DOUBLE_MIN;
-    double maxX = -1.0;
+    double maxX = -DOUBLE_MAX;
     double minX = DOUBLE_MAX;
     // double maxY = DOUBLE_MIN;
-    double maxY = -1.0;
+    double maxY = -DOUBLE_MAX;
     double minY = DOUBLE_MAX;
     // double maxZ = DOUBLE_MIN;
-    double maxZ = -1.0; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+    double maxZ = -DOUBLE_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
     double minZ = DOUBLE_MAX;
 
     double curX;

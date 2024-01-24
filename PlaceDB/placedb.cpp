@@ -330,6 +330,6 @@ void PlaceDB::showDBInfo()
     printf("               Pin #: %d\n", pinCount);
 
     // printf( "               Pin #: %d (in: %d  out: %d  undefined: %d)\n", pinNum, inPinNum, outPinNum, undefPinNum );
-    double HPWL = calcHPWL();
-    printf("     Pin-to-Pin HPWL: %.0f (%g)\n", HPWL, HPWL);
+    // double HPWL = calcHPWL();
+    // printf("     Pin-to-Pin HPWL: %.0f (%g)\n", HPWL, HPWL);
 }
