@@ -26,7 +26,7 @@ public:
     double commonRowHeight; //! rowHeight that all(most of the times) rows share
 
     CRect coreRegion;   // In 2d placement the core region is just the rectangle that encloses all placement rows(see setCoreRegion), in 3d it might be shrunk. coreRegion should be smaller than the whole chip
-    CRect chipRegion;   // In bookshelf we don't know how large the chip is, so chip Region is obtained with coreRegion and all terminal locations. adapect1 is a good example
+    CRect chipRegion;   // Chip Region is obtained with coreRegion and all terminal locations. adapect1 is a good example. This should only be used for plot.
     float totalRowArea; //! area of all placement rows, equal or less than coreRegion area, usually equals coreRegion area. calculated in setCoreRegion
 
     //! dbXxs: vector for storing Xxs

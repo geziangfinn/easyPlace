@@ -114,11 +114,14 @@ public:
     void binInitialization();
     void gradientVectorInitialization();
 
+    void binNodeDensityUpdate(); //! only consider density from movable modules(nodes) in this function, because terminal density only needed to be calculated once, in binInitializaton()
     void densityOverflowUpdate();
     void wirelengthGradientUpdate();
     void densityGradientUpdate();
     void totalGradientUpdate(float);
-    void binNodeDensityUpdate(); //! only consider density from movable modules(nodes) in this function, because terminal density only needed to be calculated once, in binInitializaton()
+
+    float penaltyFactorInitilization(); //initialize lambda 0, see ePlace paper equation 35
+    
 
     //! be aware of density scaling and local smooth in density calculation
 };

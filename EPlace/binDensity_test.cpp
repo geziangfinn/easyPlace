@@ -31,12 +31,18 @@ int main(int argc, char *argv[])
         BookshelfParser parser;
         parser.ReadFile(argv[2], *placedb);
     }
+    placedb->showDBInfo();
     QPPlacer* qpplacer=new QPPlacer(placedb);
     qpplacer->quadraticPlacement();
 
     EPlacer_2D* eplacer=new EPlacer_2D(placedb);
     eplacer->setTargetDensity(0.9);
-    eplacer->fillerInitialization();
-    eplacer->binInitialization();
-    // eplacer->binNodeDensityUpdate();
+
+    eplacer->initialization();
+
+    eplacer->binNodeDensityUpdate();
+
+    eplacer->wirelengthGradientUpdate();
+    eplacer->densityGradientUpdate();
+    eplacer->totalGradientUpdate(1.0);
 }

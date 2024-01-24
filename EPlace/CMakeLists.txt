@@ -8,6 +8,9 @@ ADD_EXECUTABLE(
     ${PROJECT_SOURCE_DIR}/PlaceDB/placedb.cpp
     ${PROJECT_SOURCE_DIR}/Plot/plot.cpp
     ${PROJECT_SOURCE_DIR}/QPlace/qplace.cpp
+    ${PROJECT_SOURCE_DIR}/FFT/fft.cpp
+    ${PROJECT_SOURCE_DIR}/FFT/fftsg2d.cpp
+    ${PROJECT_SOURCE_DIR}/FFT/fftsg.cpp
 )
 INCLUDE_DIRECTORIES (
 	${PROJECT_SOURCE_DIR}/Parser
@@ -17,6 +20,7 @@ INCLUDE_DIRECTORIES (
     ${PROJECT_SOURCE_DIR}/Library/eigen-git-mirror
     ${PROJECT_SOURCE_DIR}/Library/CImg
     ${PROJECT_SOURCE_DIR}/QPlace
+    ${PROJECT_SOURCE_DIR}/FFT
     )
 
 target_link_libraries(ePlaceTest "-lgomp -lpthread -lm -ldl -lX11")

@@ -175,7 +175,7 @@ void EPlacer_2D::binInitialization()
         binDimension.x = binDimension.y = 1024; //!
     }
 
-    cout << "Bin dimension: " << binDimension;
+    cout << "Bin dimension: " << binDimension << endl;
 
     binStep.x = float_div(coreRegionWidth, binDimension.x);
     binStep.y = float_div(coreRegionHeight, binDimension.y);
@@ -247,8 +247,8 @@ void EPlacer_2D::binInitialization()
         binStartIdx.y = INT_DOWN((curTerminal->getLL_2D().y - db->coreRegion.ll.y) / binStep.y);
         binEndIdx.y = INT_DOWN((curTerminal->getUR_2D().y - db->coreRegion.ll.y) / binStep.y);
 
-        cout << curTerminal->getLL_2D() << curTerminal->getUR_2D() << endl;
-        cout << binStep << " " << db->coreRegion.ll << endl;
+        // cout << curTerminal->getLL_2D() << curTerminal->getUR_2D() << endl;
+        // cout << binStep << " " << db->coreRegion.ll << endl;
         assert(binStartIdx.x >= 0);
         assert(binEndIdx.x >= 0);
         assert(binStartIdx.y >= 0);
@@ -286,8 +286,8 @@ void EPlacer_2D::binInitialization()
             {
                 curBinAvailableArea += getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, curRow.getLL_2D(), curRow.getUR_2D());
             }
-            debugOutput("Bin area", bins[i][j]->area);
-            debugOutput("Available area", curBinAvailableArea);
+            // debugOutput("Bin area", bins[i][j]->area);
+            // debugOutput("Available area", curBinAvailableArea);
             if (float_equal(bins[i][j]->area, curBinAvailableArea))
             {
                 bins[i][j]->baseDensity = 0;
@@ -309,6 +309,7 @@ void EPlacer_2D::gradientVectorInitialization()
 
 void EPlacer_2D::densityOverflowUpdate()
 {
+    segmentFaultCP("densityOverflow");
     float globalOverflowArea = 0;
     float nodeAreaScaled = ePlaceStdCellArea + ePlaceMacroArea * targetDensity;
     float invertedBinArea = 1.0 / (binStep.x * binStep.y); // 1/bin area
@@ -330,7 +331,7 @@ void EPlacer_2D::wirelengthGradientUpdate()
     ////////////////////////////////////////////////////////////////
     // first, calculate tau(density overflow)
     densityOverflowUpdate();
-
+    segmentFaultCP("wireLengthGradient");
     //! now calculate gamma with the updated tau, here we actually calculate 1/gamma for furthurer calculation
     VECTOR_2D baseWirelengthCoef;
     baseWirelengthCoef.x = baseWirelengthCoef.y = 0.125;     // 0.125=1/8.0, 8.0:see ePlace paper equation 38. Notice that baseWirelngthCoef
@@ -390,6 +391,7 @@ void EPlacer_2D::densityGradientUpdate()
     ////////////////////////////////////////////////////////////////
     //! Step1: obtain electric field(e) through FFT
     ////////////////////////////////////////////////////////////////
+    segmentFaultCP("densityGradient");
     replace::FFT_2D fft(binDimension.x, binDimension.y, binStep.x, binStep.y);
     float invertedBinArea = 1.0 / (binStep.x * binStep.y);
     for (int i = 0; i < binDimension.x; i++)
@@ -478,13 +480,13 @@ void EPlacer_2D::densityGradientUpdate()
             binEndIdx.x = binDimension.x - 1;
         }
 
-        //! beware: local smooth and density scaling!
+        //! beware: local smooth
         for (int i = binStartIdx.x; i <= binEndIdx.x; i++)
         {
             for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
             {
                 float overlapArea = localSmoothLengthScale.x * localSmoothLengthScale.y * getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
-
+                //????????????????????? watch out: do we need macro density scaling here? it seems RePlAce didn't do that
                 densityGradient[index].x += overlapArea * bins[i][j]->E.x;
                 densityGradient[index].y += overlapArea * bins[i][j]->E.y;
             }
@@ -496,6 +498,7 @@ void EPlacer_2D::densityGradientUpdate()
 
 void EPlacer_2D::totalGradientUpdate(float lambda)
 {
+    segmentFaultCP("totalGradient");
     int index = 0;
     for (Module *curNodeOrFiller : ePlaceNodesAndFillers)
     {
@@ -516,6 +519,33 @@ void EPlacer_2D::totalGradientUpdate(float lambda)
 
         index++;
     }
+}
+
+float EPlacer_2D::penaltyFactorInitilization()
+{
+    float denominator = 0;
+    float numerator = 0;
+
+    int nodeCount = wirelengthGradient.size();
+    int nodeAndFillerCount = densityGradient.size();
+
+    float lambda0 = 0;
+    
+    for (int i = 0; i < nodeCount; i++)
+    {
+        numerator += fabs(wirelengthGradient[i].x);
+        numerator += fabs(wirelengthGradient[i].y);
+        denominator += fabs(densityGradient[i].x);
+        denominator += fabs(densityGradient[i].y);
+    }
+    for (int i = nodeCount; i < nodeAndFillerCount; i++)
+    {
+        denominator += fabs(densityGradient[i].x);
+        denominator += fabs(densityGradient[i].y);
+    }
+
+    lambda0 = float_div(numerator, denominator);
+    return lambda0;
 }
 
 void EPlacer_2D::binNodeDensityUpdate()

@@ -19,7 +19,18 @@ void QPPlacer::quadraticPlacement()
     assert(HPWL == HPWL2);
 
     int nodeCount = db->dbNodes.size();
-    int maxIterationNumber = 30;
+    int maxIterationNumber;
+
+    if(gArg.CheckExist("IPiteCount"))
+    {
+        gArg.GetInt("IPiteCount",&maxIterationNumber);
+    }
+    else
+    {
+        maxIterationNumber=30;
+    }
+
+
     float xError, yError;
     float target_error = 0.000001;
 

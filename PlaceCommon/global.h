@@ -17,7 +17,7 @@ using namespace std;
 const string padding(30, '=');
 #define EPS 1.0E-15 // for float number comparison
 #define DOUBLE_MAX __DBL_MAX__
-#define DOUBLE_MIN __DBL_MIN__
+#define DOUBLE_MIN __DBL_MIN__ //!!!!! double min > 0!!!
 #define INT_CONVERT(a) (int)(1.0 * (a) + 0.5f)
 #define INT_DOWN(a) (int)(a)
 #define NEGATIVE_MAX_EXP -300
@@ -98,7 +98,7 @@ struct POS_2D // POS means postition, POS_2D can be used to store coordinates, o
     }
     inline void SetZero()
     {
-        x = y = 0;
+        x = y = 0.0;//!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const POS_2D &pos)
     {
@@ -120,7 +120,7 @@ struct POS_3D
     }
     inline void SetZero()
     {
-        x = y = z = 0;
+        x = y = z = 0.0;//!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const POS_3D &pos)
     {
@@ -138,7 +138,7 @@ struct VECTOR_2D
     }
     inline void SetZero()
     {
-        x = y = 0;
+        x = y = 0.0;//!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_2D &vec)
     {
@@ -157,7 +157,7 @@ struct VECTOR_2D_INT
     }
     inline void SetZero()
     {
-        x = y = 0;
+        x = y = 0;//!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_2D_INT &vec)
     {
@@ -177,7 +177,7 @@ struct VECTOR_3D
     }
     inline void SetZero()
     {
-        x = y = z = 0;
+        x = y = z = 0.0;//!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_3D &vec)
     {
@@ -215,7 +215,7 @@ public:
     }
     void Print()
     {
-        cout << "lower left: " << ll << " upper right: " << ur << "\n";
+        cout << "lower left: " << ll << " to upper right: " << ur << "\n";
     }
     void Init()
     {
@@ -227,13 +227,13 @@ public:
     float getWidth()
     {
         float width = ur.x - ll.x;
-        assert(width > 0);
+        assert(width > 0.0);
         return width;
     }
     float getHeight()
     {
         float height = ur.y - ll.y;
-        assert(height > 0);
+        assert(height > 0.0);
         return height;
     }
     POS_2D getCenter()
@@ -242,6 +242,10 @@ public:
         center.x += 0.5 * this->getWidth();
         center.y += 0.5 * this->getHeight();
         return center;
+    }
+    float getArea()
+    {
+        return getHeight()*getWidth();
     }
 };
 

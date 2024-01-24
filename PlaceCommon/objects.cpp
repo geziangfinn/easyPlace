@@ -38,7 +38,7 @@ double Net::calcNetHPWL()
         minY = min(minY, curY);
         maxY = max(maxY, curY);
         minZ = min(minZ, curZ);
-        maxZ = max(maxY, curZ);
+        maxZ = max(maxZ, curZ);
     }
     if (!gArg.CheckExist("3DIC"))
     {
@@ -50,11 +50,14 @@ double Net::calcNetHPWL()
 
 double Net::calcBoundPin()
 {
-    double maxX = DOUBLE_MIN;
+    // double maxX = DOUBLE_MIN;
+    double maxX = -1.0;
     double minX = DOUBLE_MAX;
-    double maxY = DOUBLE_MIN;
+    // double maxY = DOUBLE_MIN;
+    double maxY = -1.0;
     double minY = DOUBLE_MAX;
-    double maxZ = DOUBLE_MIN;
+    // double maxZ = DOUBLE_MIN;
+    double maxZ = -1.0; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
     double minZ = DOUBLE_MAX;
 
     double curX;
@@ -67,7 +70,8 @@ double Net::calcBoundPin()
         curX = curPin->getAbsolutePos().x;
         curY = curPin->getAbsolutePos().y;
         curZ = curPin->getAbsolutePos().z;
-
+        //!!!!! assume curX curY curZ always >= 0!!!
+        assert(curZ == 0);
         if (curX < minX)
         {
             minX = curX;
@@ -106,7 +110,8 @@ double Net::calcBoundPin()
     }
     if (!gArg.CheckExist("3DIC"))
     {
-        assert(maxZ == minZ == 0);
+        assert(float_equal(maxZ, 0.0));
+        assert(float_equal(minZ, 0.0));
     }
     HPWL = ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
     return HPWL;
@@ -138,13 +143,16 @@ double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
     numeratorMin.SetZero();
     denominatorMin.SetZero();
 
+    assert(boundPinXmax);
+    assert(boundPinXmin);
+    assert(boundPinYmax);
+    assert(boundPinYmin);
+
     float pinMaxX = boundPinXmax->getAbsolutePos().x;
     float pinMaxY = boundPinYmax->getAbsolutePos().y;
-    float pinMaxZ = boundPinZmax->getAbsolutePos().z;
 
     float pinMinX = boundPinXmin->getAbsolutePos().x;
     float pinMinY = boundPinYmin->getAbsolutePos().y;
-    float pinMinZ = boundPinZmin->getAbsolutePos().z;
 
     for (Pin *curPin : netPins)
     {
@@ -220,16 +228,18 @@ double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
 
 VECTOR_2D Net::getWirelengthGradientWA_2D(VECTOR_2D invertedGamma, Pin *curPin)
 {
-    VECTOR_2D gradientOnCurrentPin;
-
-    VECTOR_2D gradientNumeratorMax;
-    VECTOR_2D gradientDenominatorMax;
-    VECTOR_2D gradientNumeratorMin;
-    VECTOR_2D gradientDenominatorMin;
-    VECTOR_2D gradientMax;
-    VECTOR_2D gradientMin;
+    assert(curPin);
+    VECTOR_2D gradientOnCurrentPin = VECTOR_2D();
+    VECTOR_2D gradientNumeratorMax = VECTOR_2D();
+    VECTOR_2D gradientDenominatorMax = VECTOR_2D();
+    VECTOR_2D gradientNumeratorMin = VECTOR_2D();
+    VECTOR_2D gradientDenominatorMin = VECTOR_2D();
+    VECTOR_2D gradientMax = VECTOR_2D();
+    VECTOR_2D gradientMin = VECTOR_2D();
     // ? no SetZero here (called in default constructor)
-    assert(gradientOnCurrentPin.x == gradientDenominatorMin.y == 0);
+    //? assert(gradientOnCurrentPin.x == gradientDenominatorMin.y == 0.0);
+    assert(gradientOnCurrentPin.x == 0.0);
+    assert(gradientDenominatorMin.y == 0.0);
 
     POS_3D curPinPosition = curPin->getAbsolutePos();
 
