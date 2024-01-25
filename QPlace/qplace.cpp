@@ -42,11 +42,11 @@ void QPPlacer::quadraticPlacement()
     // BCGSTAB settings
     SMatrix X_A(nodeCount, nodeCount), Y_A(nodeCount, nodeCount);            // A for Ax=b
     VectorXf X_x(nodeCount), Y_x(nodeCount), X_b(nodeCount), Y_b(nodeCount); // x and b for Ax=b
-
+    double qp_time;
     for (int i = 0;; i++)
     {
 
-        double qp_start = seconds();
+        time_start(&qp_time);
         createSparseMatrix(X_A, Y_A, X_x, Y_x, X_b, Y_b);
 
         BiCGSTAB<SMatrix, IdentityPreconditioner> solver;
@@ -69,7 +69,7 @@ void QPPlacer::quadraticPlacement()
             plotter->plotCurrentPlacement("Initial placement iteration " + to_string(i));
         }
 
-        double qp_time = seconds() - qp_start;
+        time_end(&qp_time);
         printf("INFO:  at iteration number %3d,  CG Error %.6lf,  HPWL %.6lf,  CPUtime %.2lf\n", i, max(xError, yError), HPWL, qp_time);
 
         if (fabs(xError) < target_error && fabs(yError) < target_error && i > 4)
@@ -86,8 +86,8 @@ void QPPlacer::quadraticPlacement()
 void QPPlacer::createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, VectorXf &Y_x, VectorXf &X_b, VectorXf &Y_b)
 {
     vector<T> tripletListX, tripletListY; // create matrix A with triples, a triple：(i,j,v), means Aij=v
-    tripletListX.reserve(1000000);
-    tripletListY.reserve(1000000);
+    tripletListX.reserve(10000000);
+    tripletListY.reserve(10000000);
     int nodeCount = db->dbNodes.size();
 
     Module *curNode = NULL;

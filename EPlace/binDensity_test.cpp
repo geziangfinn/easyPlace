@@ -62,15 +62,23 @@ int main(int argc, char *argv[])
     qpplacer->setPlotter(plotter);
     qpplacer->quadraticPlacement();
 
+    double initializationTime;
+    double iterationTime;
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
     eplacer->setPlotter(plotter);
     eplacer->setTargetDensity(0.9);
 
+    time_start(&initializationTime);
     eplacer->initialization();
+    time_end(&initializationTime);
 
+    time_start(&iterationTime);
     eplacer->binNodeDensityUpdate();
-
     eplacer->wirelengthGradientUpdate();
     eplacer->densityGradientUpdate();
     eplacer->totalGradientUpdate(1.0);
+    time_end(&iterationTime);
+
+    cout << "Initialization time: " << initializationTime << endl;
+    cout << "Iteration time: " << iterationTime << endl;
 }
