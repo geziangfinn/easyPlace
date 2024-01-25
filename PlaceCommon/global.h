@@ -262,6 +262,11 @@ inline float float_div(float a, float b) // a/b
     return c;
 }
 
+inline float float_square(float a) //a^2
+{
+    return a*a;
+}
+
 inline bool float_greater(float a, float b) // return true if a > b
 {
     return a - b > 1.0 * EPS;
