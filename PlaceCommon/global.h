@@ -14,6 +14,7 @@
 #include <sys/resource.h>
 #include "string.h"
 #include "arghandler.h"
+#include "omp.h"
 using namespace std;
 const string padding(30, '=');
 #define EPS 1.0E-15 // for float number comparison
@@ -318,6 +319,29 @@ inline double seconds()
     // clock() loop is about 72min. (or 4320 sec)
     // return double(clock())/CLOCKS_PER_SEC;
 }
+
+inline void time_start(double *time_cost) {
+    struct timeval time_val;
+    time_t time_secs;
+    suseconds_t time_micro;
+    gettimeofday(&time_val, NULL);
+    time_micro = time_val.tv_usec;
+    time_secs = time_val.tv_sec;
+    *time_cost = (double)time_micro / 1000000 + time_secs;
+    return;
+}
+
+inline void time_end(double *time_cost) {
+    struct timeval time_val;
+    time_t time_secs;
+    suseconds_t time_micro;
+    gettimeofday(&time_val, NULL);
+    time_micro = time_val.tv_usec;
+    time_secs = time_val.tv_sec;
+    *time_cost = (double)time_micro / 1000000 + time_secs - *time_cost;
+    return;
+}
+
 
 inline void segmentFaultCP(string checkpointname)
 {

@@ -8,8 +8,12 @@ void EPlacer_2D::setTargetDensity(float target)
 
 void EPlacer_2D::initialization()
 {
+    double binInitTime;
     fillerInitialization();
+    time_start(&binInitTime);
     binInitialization();
+    time_end(&binInitTime);
+    cout << "Bin init time: " << binInitTime << endl;
     gradientVectorInitialization();
 }
 
@@ -160,8 +164,11 @@ void EPlacer_2D::binInitialization()
     int idealBinCount = INT_CONVERT(coreRegionArea / idealBinArea);
 
     bool isUpdate = false;
+    // bin dimension upper bound: 1024 rather than 2048
+    // for (int i = 1; i <= 10; i++)
+    // { //! 4*4,8*8,16*16,32*32..., 2048*2048
     for (int i = 1; i <= 10; i++)
-    { //! 4*4,8*8,16*16,32*32...
+    { //! 4*4,8*8,16*16,32*32..., 1024*1024
         if ((2 << i) * (2 << i) <= idealBinCount &&
             (2 << (i + 1)) * (2 << (i + 1)) > idealBinCount)
         {
@@ -197,6 +204,12 @@ void EPlacer_2D::binInitialization()
     //?
     bins.resize(binDimension.x);
 
+    double addBinTime;
+    double terminalDensityTime;
+    double baseDensityTime;
+
+    time_start(&addBinTime);
+
     for (int i = 0; i < binDimension.x; i++)
     {
         bins[i].resize(binDimension.y);
@@ -221,12 +234,16 @@ void EPlacer_2D::binInitialization()
         }
     }
 
+    time_end(&addBinTime);
+    cout << "Bin add time: " << addBinTime << endl;
     ////////////////////////////////////////////////////////////////
     // terminal density calculation, calculate here because they are terminals and only needed to be considered once
     ////////////////////////////////////////////////////////////////
     segmentFaultCP("terminalDensity");
     VECTOR_2D_INT binStartIdx;
     VECTOR_2D_INT binEndIdx;
+
+    time_start(&terminalDensityTime);
 
     for (Module *curTerminal : db->dbTerminals)
     {
@@ -273,10 +290,16 @@ void EPlacer_2D::binInitialization()
             }
         }
     }
+    
+    time_end(&terminalDensityTime);
+    cout << "Terminal density time: " << terminalDensityTime << endl;
     ////////////////////////////////////////////////////////////////
     // base density calculation, also only needed to be considered once
     ////////////////////////////////////////////////////////////////
     segmentFaultCP("baseDensity");
+
+    time_start(&baseDensityTime);
+
     for (int i = 0; i < binDimension.x; i++)
     {
         for (int j = 0; j < binDimension.y; j++)
@@ -298,6 +321,8 @@ void EPlacer_2D::binInitialization()
             }
         }
     }
+    time_end(&baseDensityTime);
+    cout << "Base density time: " << baseDensityTime << endl;
 }
 
 void EPlacer_2D::gradientVectorInitialization()
@@ -530,7 +555,7 @@ float EPlacer_2D::penaltyFactorInitilization()
     int nodeAndFillerCount = densityGradient.size();
 
     float lambda0 = 0;
-    
+
     for (int i = 0; i < nodeCount; i++)
     {
         numerator += fabs(wirelengthGradient[i].x);
