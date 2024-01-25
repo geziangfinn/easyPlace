@@ -1,3 +1,6 @@
+#ifndef EPLACE_H
+#define EPLACE_H
+
 #include "global.h"
 #include "objects.h"
 #include "placedb.h"
@@ -129,3 +132,4 @@ public:
 
     //! be aware of density scaling and local smooth in density calculation
 };
+#endif

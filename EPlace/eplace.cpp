@@ -140,6 +140,11 @@ void EPlacer_2D::fillerInitialization()
     // terminal(fixed macro) density scaling in density computation?: RePlace bin.cpp line 480
 
     // density scaling when calculating Aws?
+
+    if (gArg.CheckExist("debug"))
+    {
+        plotter->setFillers(ePlaceFillers);
+    }
 }
 
 void EPlacer_2D::binInitialization()
@@ -290,7 +295,7 @@ void EPlacer_2D::binInitialization()
             }
         }
     }
-    
+
     time_end(&terminalDensityTime);
     cout << "Terminal density time: " << terminalDensityTime << endl;
     ////////////////////////////////////////////////////////////////
@@ -635,6 +640,10 @@ void EPlacer_2D::binNodeDensityUpdate()
         binStartIdx.y = INT_DOWN((rectForCurNode.ll.y - db->coreRegion.ll.y) / binStep.y);
         binEndIdx.y = INT_DOWN((rectForCurNode.ur.y - db->coreRegion.ll.y) / binStep.y);
 
+        if(!(binStartIdx.x>=0))
+        {
+            cout<<"Module pos: "<<rectForCurNode.ll<<" "<<db->coreRegion.ll<<endl;
+        }
         assert(binStartIdx.x >= 0);
         assert(binEndIdx.x >= 0);
         assert(binStartIdx.y >= 0);

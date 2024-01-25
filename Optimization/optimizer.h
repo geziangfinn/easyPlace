@@ -3,8 +3,9 @@
 
 #include "eplace.h"
 #include "global.h"
+#include "plot.h"
 
-#define DELTA_HPWL_REF 350000
+#define DELTA_HPWL_REF 35000000
 #define PENALTY_MULTIPLIER_BASE 1.1
 #define PENALTY_MULTIPLIER_UPPERBOUND 1.1
 #define PENALTY_MULTIPLIER_LOWERBOUND 0.75
@@ -16,8 +17,10 @@ public:
     Optimizer();
     Optimizer(EPlacer_2D* placer,bool verbose);
     void DoNesterovOpt();
+    void setPlotter(Plotter*);
 
 private:
+    Plotter * plotter;
     bool verbose;
     EPlacer_2D* placer;
     vector<POS_3D> lastIterModulePosition;

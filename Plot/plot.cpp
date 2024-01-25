@@ -2,11 +2,11 @@
 using namespace cimg_library;
 void Plotter::setPlotPath(string _plotPath)
 {
-    plotPath=_plotPath;
+    plotPath = _plotPath;
 }
 void Plotter::plotCurrentPlacement(string imageName)
 {
-    string imagePath=plotPath;
+    string imagePath = plotPath;
     float chipRegionWidth = db->chipRegion.ur.x - db->chipRegion.ll.x;
     float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
 
@@ -59,6 +59,19 @@ void Plotter::plotCurrentPlacement(string imageName)
         img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
     }
 
+    if (gArg.CheckExist("debug"))
+    {
+        for (Module *curNode : fillers)
+        {
+            assert(curNode);
+            int x1 = getX(curNode->getLL_2D().x, unitX) + xMargin;
+            int x2 = getX(curNode->getUR_2D().x, unitX) + xMargin;
+            int y1 = getY(curNode->getLL_2D().y, unitY) + yMargin;
+            int y2 = getY(curNode->getUR_2D().y, unitY) + yMargin;
+            img.draw_rectangle(x1, y1, x2, y2, Green, opacity);
+        }
+    }
+
     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
     img.save_bmp(string(imagePath + imageName + string(".bmp")).c_str());
     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
@@ -73,6 +86,11 @@ int Plotter::getX(float x, float unitX)
 int Plotter::getY(float y, float unitY)
 {
     float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
-    return (chipRegionHeight - (y - db->chipRegion.ll.y)) * unitY;//? 
-    //return (chipRegionHeight - y) * unitY;//? 
+    return (chipRegionHeight - (y - db->chipRegion.ll.y)) * unitY; //?
+    // return (chipRegionHeight - y) * unitY;//?
+}
+
+void Plotter::setFillers(vector<Module *> _fillers)
+{
+    fillers=_fillers;
 }

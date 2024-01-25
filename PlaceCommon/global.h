@@ -350,7 +350,7 @@ inline void time_end(double *time_cost) {
 
 inline void segmentFaultCP(string checkpointname)
 {
-    if (gArg.CheckExist("debug"))
+    if (gArg.CheckExist("segDebug"))
     {
         cout << endl
              << padding << checkpointname << padding << endl;

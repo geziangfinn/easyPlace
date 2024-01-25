@@ -5,6 +5,7 @@
 #include "CImg.h"
 const unsigned char Blue[] = {120, 200, 255},
                     Black[] = {0, 0, 0},
+                    Green[] = {0, 150, 0},
                     Red[] = {255, 0, 0};
 class Plotter
 {
@@ -23,6 +24,8 @@ public:
     void plotCurrentPlacement(string imgName);
     int getX(float, float);
     int getY(float, float);
+    void setFillers(vector<Module*>);
+    vector<Module*> fillers;
 };
 
 #endif
