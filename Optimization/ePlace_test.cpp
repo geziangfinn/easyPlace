@@ -67,7 +67,14 @@ int main(int argc, char *argv[])
     double iterationTime;
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
     eplacer->setPlotter(plotter);
-    eplacer->setTargetDensity(0.9);
+    
+    float targetDensity;
+    if(!gArg.GetFloat("targetDensity",&targetDensity))
+    {
+        targetDensity=1.0;
+    }
+
+    eplacer->setTargetDensity(targetDensity);
     eplacer->initialization();
 
     Optimizer* opt=new Optimizer(eplacer,true);

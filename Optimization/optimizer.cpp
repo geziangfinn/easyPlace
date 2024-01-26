@@ -19,7 +19,7 @@ void Optimizer::Init()
     lastIterHPWL = placer->db->calcHPWL();
 
     lastIterModulePosition.resize(movableModuleSize);
-    lastIterTotalGradient.resize(movableModuleSize);
+    lastIterPreconditionedGradient.resize(movableModuleSize);
     preconditionedGradient.resize(movableModuleSize);
     nesterovReferencePosition.resize(movableModuleSize);
     WAPreconditioner.resize(movableModuleSize);
@@ -60,7 +60,7 @@ void Optimizer::DoNesterovOpt()
         UpdatePenaltyFactor();
         // need a function to calculate lambda in eplace
         placer->totalGradientUpdate(penaltyFactor);
-        if (gArg.CheckExist("fullPlot")&&iterCount%10==0)
+        if (gArg.CheckExist("fullPlot") && iterCount % 10 == 0)
         {
             plotter->plotCurrentPlacement("Ite_" + to_string(iterCount));
         }
@@ -76,18 +76,19 @@ void Optimizer::NesterovIter()
 {
 
     VECTOR_2D stepSize;
-    // if (iterCount == 0)
-    // {
-        stepSize.x = 0.01;
-        stepSize.y = 0.01;
-    // }
-    // else
-    // {
-    //     VECTOR_2D lipshitzConstant = LipschitzConstantPrediction();
-    //     stepSize.x = 1 / lipshitzConstant.x;
-    //     stepSize.y = 1 / lipshitzConstant.y;
-    // }
-    cout<<"Step size: "<<stepSize<<endl<<endl;
+    if (iterCount == 0)
+    {
+        stepSize.x = 1;
+        stepSize.y = 1;
+    }
+    else
+    {
+        VECTOR_2D lipshitzConstant = LipschitzConstantPrediction();
+        stepSize.x = 1 / lipshitzConstant.x;
+        stepSize.y = 1 / lipshitzConstant.y;
+    }
+    cout << "Step size: " << stepSize << endl
+         << endl;
 
     float newOptimizationParameter = (1 + sqrt(4 * float_square(nesterovOptimizationParameter) + 1)) / 2; // ak+1
     for (uint32_t idx = 0; idx < placer->ePlaceNodesAndFillers.size(); idx++)
@@ -111,11 +112,11 @@ void Optimizer::NesterovIter()
 
         // update this iteration
         lastIterModulePosition[idx] = curPosition;
-        lastIterTotalGradient[idx] = placer->totalGradient[idx];
+        lastIterPreconditionedGradient[idx] = gradient;
         nesterovReferencePosition[idx] = newReferencePosition;
-        if(isnanf(newPosition.x)||isnanf(newPosition.y))
+        if (isnanf(newPosition.x) || isnanf(newPosition.y))
         {
-            cout<<"\nnmb\n";
+            cout << "\nnmb\n";
             exit(0);
         }
         placer->db->setModuleCenter_2D(placer->ePlaceNodesAndFillers[idx], newPosition.x, newPosition.y);
@@ -128,7 +129,7 @@ VECTOR_2D Optimizer::LipschitzConstantPrediction()
 {
 
     assert(placer->ePlaceNodesAndFillers.size() == lastIterModulePosition.size());
-    assert(placer->totalGradient.size() == lastIterTotalGradient.size());
+    assert(placer->totalGradient.size() == lastIterPreconditionedGradient.size());
 
     VECTOR_2D lipschitzConstant;
 
@@ -140,10 +141,10 @@ VECTOR_2D Optimizer::LipschitzConstantPrediction()
     {
         POS_3D curModulePosition = placer->ePlaceNodesAndFillers[idx]->getCenter();
 
-        squaredSumNumeratorX += float_square(placer->totalGradient[idx].x - lastIterTotalGradient[idx].x);
+        squaredSumNumeratorX += float_square(preconditionedGradient[idx].x - lastIterPreconditionedGradient[idx].x);
         squaredSumDenominatorX += float_square(curModulePosition.x - lastIterModulePosition[idx].x);
 
-        squaredSumNumeratorY += float_square(placer->totalGradient[idx].y - lastIterTotalGradient[idx].y);
+        squaredSumNumeratorY += float_square(preconditionedGradient[idx].y - lastIterPreconditionedGradient[idx].y);
         squaredSumDenominatorY += float_square(curModulePosition.y - lastIterModulePosition[idx].y);
     }
 
@@ -170,7 +171,7 @@ bool Optimizer::StopCondition()
 void Optimizer::UpdatePenaltyFactor()
 {
     float curHPWL = placer->db->calcHPWL();
-    float multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(curHPWL - lastIterHPWL) / DELTA_HPWL_REF + 1.0));
+    float multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(curHPWL - lastIterHPWL) / DELTA_HPWL_REF + 1.0)); // see ePlace-3D code opt.cpp line 1523
     if (float_greater(multiplier, PENALTY_MULTIPLIER_UPPERBOUND))
     {
         multiplier = PENALTY_MULTIPLIER_UPPERBOUND;
@@ -180,6 +181,14 @@ void Optimizer::UpdatePenaltyFactor()
         multiplier = PENALTY_MULTIPLIER_LOWERBOUND;
     }
     penaltyFactor *= multiplier;
+    // if (penaltyFactor < 0.00001)
+    // {
+    //     penaltyFactor = 0.00001;
+    // }
+    // else if (penaltyFactor > 10.0)
+    // {
+    //     penaltyFactor = 10.0;
+    // }
     lastIterHPWL = curHPWL;
 }
 

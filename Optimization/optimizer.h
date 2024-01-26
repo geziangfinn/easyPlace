@@ -5,10 +5,10 @@
 #include "global.h"
 #include "plot.h"
 
-#define DELTA_HPWL_REF 35000000
+#define DELTA_HPWL_REF 350000
 #define PENALTY_MULTIPLIER_BASE 1.1
-#define PENALTY_MULTIPLIER_UPPERBOUND 1.1
-#define PENALTY_MULTIPLIER_LOWERBOUND 0.75
+#define PENALTY_MULTIPLIER_UPPERBOUND 1.05
+#define PENALTY_MULTIPLIER_LOWERBOUND (0.95)
 #define MAX_ITERATION 3000
 
 class Optimizer 
@@ -24,7 +24,7 @@ private:
     bool verbose;
     EPlacer_2D* placer;
     vector<POS_3D> lastIterModulePosition;
-    vector<VECTOR_2D> lastIterTotalGradient;
+    vector<VECTOR_2D> lastIterPreconditionedGradient;
     vector<VECTOR_2D> preconditionedGradient;
     vector<POS_3D> nesterovReferencePosition;
     float nesterovOptimizationParameter;

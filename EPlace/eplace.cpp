@@ -3,7 +3,7 @@
 void EPlacer_2D::setTargetDensity(float target)
 {
     targetDensity = target;
-    cout << padding << "Target density set: " << padding << endl;
+    cout << padding << "Target density set at: " <<targetDensity<< padding << endl;
 }
 
 void EPlacer_2D::initialization()
@@ -364,7 +364,7 @@ void EPlacer_2D::wirelengthGradientUpdate()
     segmentFaultCP("wireLengthGradient");
     //! now calculate gamma with the updated tau, here we actually calculate 1/gamma for furthurer calculation
     VECTOR_2D baseWirelengthCoef;
-    baseWirelengthCoef.x = baseWirelengthCoef.y = 0.125;     // 0.125=1/8.0, 8.0:see ePlace paper equation 38. Notice that baseWirelngthCoef
+    baseWirelengthCoef.x = baseWirelengthCoef.y = 0.125 /*0.5*/;     // 0.125=1/8.0, 8.0:see ePlace paper equation 38. Notice that baseWirelngthCoef
                                                              // is wcof00_org in RePlace code wlen.cpp,
                                                              // and is tuned according to input benchmark in RePlAce main.cpp
     baseWirelengthCoef.x = baseWirelengthCoef.x / binStep.x; // binStep: wb in ePlace paper equation 38, 1/8/wb=1/8.0wb

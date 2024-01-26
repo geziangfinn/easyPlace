@@ -59,7 +59,7 @@ void Plotter::plotCurrentPlacement(string imageName)
         img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
     }
 
-    if (gArg.CheckExist("debug"))
+    if (gArg.CheckExist("debug")&&gArg.CheckExist("fullPlot"))
     {
         for (Module *curNode : fillers)
         {
