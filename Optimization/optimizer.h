@@ -8,8 +8,9 @@
 #define DELTA_HPWL_REF 350000
 #define PENALTY_MULTIPLIER_BASE 1.1
 #define PENALTY_MULTIPLIER_UPPERBOUND 1.05
-#define PENALTY_MULTIPLIER_LOWERBOUND (0.95)
+#define PENALTY_MULTIPLIER_LOWERBOUND 0.95
 #define MAX_ITERATION 3000
+#define BKTRK_EPS 0.95
 
 class Optimizer 
 {
@@ -23,21 +24,22 @@ private:
     Plotter * plotter;
     bool verbose;
     EPlacer_2D* placer;
-    vector<POS_3D> lastIterModulePosition;
-    vector<VECTOR_2D> lastIterPreconditionedGradient;
+    vector<POS_3D> curIterModulePosition; //uk
+    vector<POS_3D> lastIterReferencePosition;  //vk-1
+    vector<POS_3D> curIterReferencePosition; //vk
+    vector<VECTOR_2D> lastIterPreconditionedGradient; //pre_vk-1
     vector<VECTOR_2D> preconditionedGradient;
-    vector<POS_3D> nesterovReferencePosition;
     float nesterovOptimizationParameter;
     float penaltyFactor;
     float lastIterHPWL;
-    vector<float> WAPreconditioner;
     uint32_t iterCount;
+    void SetModulePosition_2D(const vector<POS_3D>& pos);
     void Init();
     void NesterovIter();
-    VECTOR_2D LipschitzConstantPrediction();
+//    VECTOR_2D LipschitzConstantPrediction();
     bool StopCondition();
-    void Preconditioning();
     void CalcPreconditionedGradient();
+    void NesterovIterBkTrk();
     void UpdatePenaltyFactor();
     void PrintStatistics();
 
