@@ -317,7 +317,7 @@ void PlaceDB::showDBInfo()
     printf("        Core Density: %.2f%% (=usedArea/core)\n", 100.0 * (movableArea + fixedAreaInCore) / coreArea);
     // printf( "           Site Area: %.0f (%.0f)", totalSiteArea, coreArea-fixedAreaInCore );
     printf("              Cell #: %d (=%dk)\n", cellCount, (cellCount / 1000));
-    printf("            Object #: %d (=%dk) (fixed: %d) (macro: %d)\n", macroCount+cellCount+terminalCount, (macroCount+cellCount+terminalCount) / 1000, terminalCount, macroCount);
+    printf("            Object #: %d (=%dk) (fixed: %d) (macro: %d)\n", macroCount + cellCount + terminalCount, (macroCount + cellCount + terminalCount) / 1000, terminalCount, macroCount);
     if (macroCount < 20)
     {
         for (Module *curNode : dbNodes)
@@ -332,4 +332,258 @@ void PlaceDB::showDBInfo()
     // printf( "               Pin #: %d (in: %d  out: %d  undefined: %d)\n", pinNum, inPinNum, outPinNum, undefPinNum );
     // double HPWL = calcHPWL();
     // printf("     Pin-to-Pin HPWL: %.0f (%g)\n", HPWL, HPWL);
+}
+
+void PlaceDB::outputBookShelf()
+{
+    string outputFilePath;
+    if (!gArg.GetString("outputPath", &outputFilePath))
+    {
+        outputFilePath = "./";
+    }
+
+    string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+
+    outputFilePath = outputFilePath + "/" + benchmarkName + "/";
+
+    string cmd = "mkdir -p " + outputFilePath;
+    system(cmd.c_str());
+    cout<<cmd<<endl;
+
+    gArg.Override("outputPath", outputFilePath);
+
+    outputAUX();
+    outputNodes();
+    outputNets();
+    outputPL();
+    outputSCL();
+}
+
+void PlaceDB::outputAUX()
+{
+    string outputFilePath;
+    gArg.GetString("outputPath", &outputFilePath);
+
+    string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+
+    outputFilePath += benchmarkName;
+    outputFilePath += "-out.aux";
+
+    cout << "Output AUX file:" << outputFilePath << endl;
+
+    gArg.Override("outputAUX",outputFilePath);
+
+    ofstream out(outputFilePath);
+    if (!out)
+    {
+        cerr << "Cannot open output file\n";
+        return;
+    }
+
+    out << "RowBasedPlacement : "
+        << benchmarkName << "-out.nodes "
+        << benchmarkName << "-out.nets "
+        << benchmarkName << "-out.wts "
+        << benchmarkName << "-out.pl "
+        << benchmarkName << "-out.scl \n\n";
+}
+
+void PlaceDB::outputNodes()
+{
+
+    string outputFilePath;
+    gArg.GetString("outputPath", &outputFilePath);
+
+    string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+
+    outputFilePath += benchmarkName;
+    outputFilePath += "-out.nodes";
+
+    cout << "Output Nodes file:" << outputFilePath << endl;
+
+    FILE *out;
+    out = fopen(outputFilePath.c_str(), "w");
+    if (!out)
+    {
+        cerr << "Cannot open output file\n";
+        return;
+    }
+
+    fprintf(out, "UCLA nodes 1.0\n\n");
+    fprintf(out, "NumNodes : %d\n", moduleCount);
+    fprintf(out, "NumTerminals : %d\n\n", dbTerminals.size());
+
+    // non-terminal
+    for (Module *curNode : dbNodes)
+    {
+        double w = curNode->getWidth();
+        double h = curNode->getHeight();
+
+        fprintf(out, " %30s %10.0f %10.0f\n",
+                curNode->name.c_str(),
+                w,
+                h);
+    }
+
+    // terminal
+    for (Module *curTerminal : dbTerminals)
+    {
+        double w = curTerminal->getWidth();
+        double h = curTerminal->getHeight();
+
+        if (curTerminal->isNI)
+        {
+            fprintf(out, " %10s %10.0f %10.0f terminal_NI\n",
+                    curTerminal->name.c_str(),
+                    w,
+                    h);
+        }
+        else
+        {
+            fprintf(out, " %10s %10.0f %10.0f terminal\n",
+                    curTerminal->name.c_str(),
+                    w,
+                    h);
+        }
+    }
+    fprintf(out, "\n\n");
+    fclose(out);
+}
+
+void PlaceDB::outputPL()
+{
+    string outputFilePath;
+    gArg.GetString("outputPath", &outputFilePath);
+
+    string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+
+    outputFilePath += benchmarkName;
+    outputFilePath += "-out.pl";
+    gArg.Override("outputPL",outputFilePath);
+
+    cout << "Output PL file:" << outputFilePath << endl;
+
+    // out "pl"
+    FILE *out = fopen(outputFilePath.c_str(), "w");
+    fprintf(out, "UCLA pl 1.0\n\n");
+
+    char *orientN = "N";
+
+    for (Module *curNode : dbNodes)
+    {
+        fprintf(out, "%s\t%.0f\t%.0f : %s",
+                curNode->name.c_str(),
+                curNode->getLL_2D().x,
+                curNode->getLL_2D().y,
+                orientN);
+        fprintf(out, "\n");
+    }
+    for (Module *curTerminal : dbTerminals)
+    {
+        fprintf(out, "%s\t%.0f\t%.0f : %s",
+                curTerminal->name.c_str(),
+                curTerminal->getLL_2D().x,
+                curTerminal->getLL_2D().y,
+                orientN);
+
+        if (curTerminal->isNI)
+            fprintf(out, " /FIXED_NI\n");
+        else
+            fprintf(out, " /FIXED\n");
+    }
+    fprintf(out, "\n\n");
+
+    fclose(out);
+}
+
+void PlaceDB::outputNets()
+{
+    string outputFilePath;
+    gArg.GetString("outputPath", &outputFilePath);
+
+    string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+
+    outputFilePath += benchmarkName;
+    outputFilePath += "-out.nets";
+
+    cout << "Output Nets file:" << outputFilePath << endl;
+
+    FILE *out;
+    out = fopen(outputFilePath.c_str(), "w");
+    if (!out)
+    {
+        cerr << "Cannot open output file\n";
+        return;
+    }
+
+    fprintf(out, "UCLA nets 1.0\n\n");
+    fprintf(out, "NumNets : %d\n", dbNets.size());
+    fprintf(out, "NumPins : %d\n", dbPins.size());
+    for (Net *curNet : dbNets)
+    {
+        fprintf(out, "NetDegree : %d\n", curNet->netPins.size());
+        for (Pin *curPin : curNet->netPins)
+        {
+            fprintf(out, " %10s B : %.2f %.2f\n",
+
+                    curPin->module->name.c_str(),
+                    curPin->offset.x,
+                    curPin->offset.y);
+        }
+    }
+    fprintf(out, "\n");
+    fclose(out);
+}
+
+void PlaceDB::outputSCL()
+{
+    string outputFilePath;
+    gArg.GetString("outputPath", &outputFilePath);
+
+    string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+
+    outputFilePath += benchmarkName;
+    outputFilePath += "-out.scl";
+
+    cout << "Output SCL file:" << outputFilePath << endl;
+
+    FILE *out;
+    out = fopen(outputFilePath.c_str(), "w");
+    if (!out)
+    {
+        cerr << "Cannot open output file\n";
+        return;
+    }
+
+    fprintf(out, "UCLA scl 1.0\n");
+    fprintf(out, "# Created       :\n");
+    fprintf(out, "# User          :\n\n");
+    fprintf(out, "NumRows : %d\n\n", dbSiteRows.size());
+
+    char *ori[2] = {"N", "Y"};
+    for (SiteRow curRow : dbSiteRows)
+    {
+        double step = curRow.step;
+        if (step == 0)
+            step = 1.0;
+        fprintf(out, "CoreRow Horizontal\n");
+        fprintf(out, " Coordinate    : %8.0f\n", curRow.bottom);
+        fprintf(out, " Height        : %8.0f\n", curRow.height);
+        fprintf(out, " Sitewidth     : %8.0f\n", step);
+        fprintf(out, " Sitespacing   : %8.0f\n", step);
+        fprintf(out, " Siteorient    : 1\n"); //%s\n", ori[i % 2] );
+        fprintf(out, " Sitesymmetry  : 1\n");
+        fprintf(out, " SubrowOrigin  : %8.0f Numsites : %8.0f\n",
+                curRow.start.x, (curRow.end.x - curRow.start.x) / curRow.step);
+
+        fprintf(out, "End\n");
+    }
+    fprintf(out, "\n");
+    fclose(out);
 }

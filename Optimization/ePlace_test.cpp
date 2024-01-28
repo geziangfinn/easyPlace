@@ -47,7 +47,9 @@ int main(int argc, char *argv[])
 
             plotPath += "/" + benchmarkName + "/";
 
-            string cmd = "mkdir -p " + plotPath;
+            string cmd = "rm -rf " + plotPath;
+            system(cmd.c_str());
+            cmd = "mkdir -p " + plotPath;
             system(cmd.c_str());
 
             plotter->setPlotPath(plotPath);
@@ -67,17 +69,41 @@ int main(int argc, char *argv[])
     double iterationTime;
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
     eplacer->setPlotter(plotter);
-    
+
     float targetDensity;
-    if(!gArg.GetFloat("targetDensity",&targetDensity))
+    if (!gArg.GetFloat("targetDensity", &targetDensity))
     {
-        targetDensity=1.0;
+        targetDensity = 1.0;
     }
 
     eplacer->setTargetDensity(targetDensity);
     eplacer->initialization();
 
-    Optimizer* opt=new Optimizer(eplacer,true);
+    Optimizer *opt = new Optimizer(eplacer, true);
     opt->setPlotter(plotter);
     opt->DoNesterovOpt();
+
+    placedb->outputBookShelf();
+
+    ///////////////////////////////////////////////////
+    // legalization and detailed placement
+    ///////////////////////////////////////////////////
+
+    string legalizerPath;
+
+    if (gArg.GetString("legalizerPath", &legalizerPath))
+    {
+        string outputAUXPath;
+        string outputPLPath;
+        string outputPath;
+        string benchmarkName;
+
+        gArg.GetString("outputAUX", &outputAUXPath);
+        gArg.GetString("outputPL", &outputPLPath);
+        gArg.GetString("outputPath", &outputPath);
+        gArg.GetString("benchmarkName", &benchmarkName);
+        string cmd = legalizerPath + "/ntuplace3" + " -aux " + outputAUXPath + " -loadpl " + outputPLPath + " -noglobal" + " -out " + outputPath + "/" + benchmarkName;
+        cout << RED << "Running legalizer: " << cmd << RESET << endl;
+        system(cmd.c_str());
+    }
 }

@@ -68,5 +68,12 @@ public:
     void setChipRegion_2D();
 
     void showDBInfo();
+
+    void outputBookShelf();
+    void outputAUX();
+    void outputNodes();
+    void outputPL();
+    void outputNets();
+    void outputSCL();
 };
 #endif
