@@ -187,11 +187,12 @@ void EPlacer_2D::binInitialization()
         binDimension.x = binDimension.y = 1024; //!
     }
 
-    cout << "Bin dimension: " << binDimension << endl;
+    cout <<BLUE<< "Bin dimension: " << binDimension <<"coreRegion width: "<<coreRegionWidth<<"coreRegion height: "<<coreRegionHeight<<RESET<< endl;
 
     binStep.x = float_div(coreRegionWidth, binDimension.x);
     binStep.y = float_div(coreRegionHeight, binDimension.y);
 
+    cout << BLUE <<"Bin step: "<<binStep<<RESET<<endl;
     ////////////////////////////////////////////////////////////////
     // add bins
     ////////////////////////////////////////////////////////////////
