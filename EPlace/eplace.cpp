@@ -1,5 +1,5 @@
 #include "eplace.h"
-using namespace cimg_library;
+
 void EPlacer_2D::setTargetDensity(float target)
 {
     targetDensity = target;

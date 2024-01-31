@@ -1,6 +1,6 @@
 #include "placedb.h"
 #include "global.h"
-using namespace cimg_library;
+
 void PlaceDB::setCoreRegion()
 {
     float bottom = dbSiteRows.front().bottom;
