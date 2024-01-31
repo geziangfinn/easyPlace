@@ -8,7 +8,6 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     PlaceDB *placedb = new PlaceDB();
-    Plotter *plotter = new Plotter(placedb);
     gArg.Init(argc, argv);
 
     if (argc < 2)
@@ -48,7 +47,6 @@ int main(int argc, char *argv[])
             string cmd = "mkdir -p " + plotPath;
             system(cmd.c_str());
 
-            plotter->setPlotPath(plotPath);
             gArg.Override("plotPath", plotPath);
 
             cout << "    Plot path: " << plotPath << endl;
@@ -58,6 +56,5 @@ int main(int argc, char *argv[])
     }
     placedb->showDBInfo();
     QPPlacer *qpplacer = new QPPlacer(placedb);
-    qpplacer->setPlotter(plotter);
     qpplacer->quadraticPlacement();
 }

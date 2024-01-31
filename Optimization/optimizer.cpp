@@ -65,14 +65,9 @@ void Optimizer::DoNesterovOpt()
         placer->totalGradientUpdate(penaltyFactor);
         if (gArg.CheckExist("fullPlot") && iterCount % 10 == 0)
         {
-            plotter->plotCurrentPlacement("Ite_" + to_string(iterCount));
+            placer->plotCurrentPlacement("Ite_" + to_string(iterCount));
         }
     }
-}
-
-void Optimizer::setPlotter(Plotter *_plotter)
-{
-    plotter = _plotter;
 }
 
 // void Optimizer::NesterovIter()

@@ -79,7 +79,6 @@ public:
     VECTOR_2D binStep;          // length of a bin in X/Y direction
 
     PlaceDB *db;
-    Plotter* plotter;
 
     vector<Module *> ePlaceFillers;         // stores all filler cells. I think filler cells shouldn't be stored in placedb. is this unnecessary when we have ePlaceNodesAndFillers?
     vector<Module *> ePlaceNodesAndFillers; //! contains nodes and fillers
@@ -127,9 +126,8 @@ public:
     void totalGradientUpdate(float);
 
     float penaltyFactorInitilization(); //initialize lambda 0, see ePlace paper equation 35
-    
-    void setPlotter(Plotter*);
-
     //! be aware of density scaling and local smooth in density calculation
+
+    void plotCurrentPlacement(string);
 };
 #endif

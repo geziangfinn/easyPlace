@@ -100,7 +100,7 @@ struct POS_2D // POS means postition, POS_2D can be used to store coordinates, o
     }
     inline void SetZero()
     {
-        x = y = 0.0;//!! 0.0!!!!
+        x = y = 0.0; //!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const POS_2D &pos)
     {
@@ -122,7 +122,7 @@ struct POS_3D
     }
     inline void SetZero()
     {
-        x = y = z = 0.0;//!! 0.0!!!!
+        x = y = z = 0.0; //!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const POS_3D &pos)
     {
@@ -140,7 +140,7 @@ struct VECTOR_2D
     }
     inline void SetZero()
     {
-        x = y = 0.0;//!! 0.0!!!!
+        x = y = 0.0; //!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_2D &vec)
     {
@@ -159,7 +159,7 @@ struct VECTOR_2D_INT
     }
     inline void SetZero()
     {
-        x = y = 0;//!! 0.0!!!!
+        x = y = 0; //!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_2D_INT &vec)
     {
@@ -179,7 +179,7 @@ struct VECTOR_3D
     }
     inline void SetZero()
     {
-        x = y = z = 0.0;//!! 0.0!!!!
+        x = y = z = 0.0; //!! 0.0!!!!
     }
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_3D &vec)
     {
@@ -247,7 +247,7 @@ public:
     }
     float getArea()
     {
-        return getHeight()*getWidth();
+        return getHeight() * getWidth();
     }
 };
 
@@ -263,9 +263,9 @@ inline float float_div(float a, float b) // a/b
     return c;
 }
 
-inline float float_square(float a) //a^2
+inline float float_square(float a) // a^2
 {
-    return a*a;
+    return a * a;
 }
 
 inline bool float_greater(float a, float b) // return true if a > b
@@ -325,7 +325,8 @@ inline double seconds()
     // return double(clock())/CLOCKS_PER_SEC;
 }
 
-inline void time_start(double *time_cost) {
+inline void time_start(double *time_cost)
+{
     struct timeval time_val;
     time_t time_secs;
     suseconds_t time_micro;
@@ -336,7 +337,8 @@ inline void time_start(double *time_cost) {
     return;
 }
 
-inline void time_end(double *time_cost) {
+inline void time_end(double *time_cost)
+{
     struct timeval time_val;
     time_t time_secs;
     suseconds_t time_micro;
@@ -346,7 +348,6 @@ inline void time_end(double *time_cost) {
     *time_cost = (double)time_micro / 1000000 + time_secs - *time_cost;
     return;
 }
-
 
 inline void segmentFaultCP(string checkpointname)
 {

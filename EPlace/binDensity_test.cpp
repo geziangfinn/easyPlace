@@ -9,7 +9,6 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     PlaceDB *placedb = new PlaceDB();
-    Plotter *plotter = new Plotter(placedb);
     gArg.Init(argc, argv);
 
     if (argc < 2)
@@ -46,10 +45,9 @@ int main(int argc, char *argv[])
 
             plotPath += "/" + benchmarkName + "/";
 
-            string cmd = "mkdir -p " + plotPath;
+            string cmd = "rm -rf "+plotPath+";mkdir -p " + plotPath;
             system(cmd.c_str());
 
-            plotter->setPlotPath(plotPath);
             gArg.Override("plotPath", plotPath);
 
             cout << "    Plot path: " << plotPath << endl;
@@ -59,13 +57,11 @@ int main(int argc, char *argv[])
     }
     placedb->showDBInfo();
     QPPlacer *qpplacer = new QPPlacer(placedb);
-    qpplacer->setPlotter(plotter);
     qpplacer->quadraticPlacement();
 
     double initializationTime;
     double iterationTime;
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
-    eplacer->setPlotter(plotter);
     eplacer->setTargetDensity(0.9);
 
     time_start(&initializationTime);

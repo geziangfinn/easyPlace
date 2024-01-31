@@ -1,9 +1,9 @@
 #include "eplace.h"
-
+using namespace cimg_library;
 void EPlacer_2D::setTargetDensity(float target)
 {
     targetDensity = target;
-    cout << padding << "Target density set at: " <<targetDensity<< padding << endl;
+    cout << padding << "Target density set at: " << targetDensity << padding << endl;
 }
 
 void EPlacer_2D::initialization()
@@ -140,11 +140,6 @@ void EPlacer_2D::fillerInitialization()
     // terminal(fixed macro) density scaling in density computation?: RePlace bin.cpp line 480
 
     // density scaling when calculating Aws?
-
-    if (gArg.CheckExist("debug"))
-    {
-        plotter->setFillers(ePlaceFillers);
-    }
 }
 
 void EPlacer_2D::binInitialization()
@@ -187,12 +182,12 @@ void EPlacer_2D::binInitialization()
         binDimension.x = binDimension.y = 1024; //!
     }
 
-    cout <<BLUE<< "Bin dimension: " << binDimension <<"coreRegion width: "<<coreRegionWidth<<"coreRegion height: "<<coreRegionHeight<<RESET<< endl;
+    cout << BLUE << "Bin dimension: " << binDimension << "coreRegion width: " << coreRegionWidth << "coreRegion height: " << coreRegionHeight << RESET << endl;
 
     binStep.x = float_div(coreRegionWidth, binDimension.x);
     binStep.y = float_div(coreRegionHeight, binDimension.y);
 
-    cout << BLUE <<"Bin step: "<<binStep<<RESET<<endl;
+    cout << BLUE << "Bin step: " << binStep << RESET << endl;
     ////////////////////////////////////////////////////////////////
     // add bins
     ////////////////////////////////////////////////////////////////
@@ -365,10 +360,10 @@ void EPlacer_2D::wirelengthGradientUpdate()
     segmentFaultCP("wireLengthGradient");
     //! now calculate gamma with the updated tau, here we actually calculate 1/gamma for furthurer calculation
     VECTOR_2D baseWirelengthCoef;
-    baseWirelengthCoef.x = baseWirelengthCoef.y = 0.125 /*0.5*/;     // 0.125=1/8.0, 8.0:see ePlace paper equation 38. Notice that baseWirelngthCoef
-                                                             // is wcof00_org in RePlace code wlen.cpp,
-                                                             // and is tuned according to input benchmark in RePlAce main.cpp
-    baseWirelengthCoef.x = baseWirelengthCoef.x / binStep.x; // binStep: wb in ePlace paper equation 38, 1/8/wb=1/8.0wb
+    baseWirelengthCoef.x = baseWirelengthCoef.y = 0.125 /*0.5*/; // 0.125=1/8.0, 8.0:see ePlace paper equation 38. Notice that baseWirelngthCoef
+                                                                 // is wcof00_org in RePlace code wlen.cpp,
+                                                                 // and is tuned according to input benchmark in RePlAce main.cpp
+    baseWirelengthCoef.x = baseWirelengthCoef.x / binStep.x;     // binStep: wb in ePlace paper equation 38, 1/8/wb=1/8.0wb
     baseWirelengthCoef.y = baseWirelengthCoef.y / binStep.y;
 
     if (globalDensityOverflow > 1.0)
@@ -579,9 +574,82 @@ float EPlacer_2D::penaltyFactorInitilization()
     return lambda0;
 }
 
-void EPlacer_2D::setPlotter(Plotter *_plotter)
+void EPlacer_2D::plotCurrentPlacement(string imageName)
 {
-    plotter = _plotter;
+    string plotPath;
+    if (!gArg.GetString("plotPath", &plotPath))
+    {
+        plotPath = "./";
+    }
+
+    float chipRegionWidth = db->chipRegion.ur.x - db->chipRegion.ll.x;
+    float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
+
+    int minImgaeLength = 1000;
+
+    int imageHeight;
+    int imageWidth;
+
+    float opacity = 0.7;
+    int xMargin = 30, yMargin = 30;
+
+    if (chipRegionWidth < chipRegionHeight)
+    {
+        imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
+        imageWidth = minImgaeLength;
+    }
+    else
+    {
+        imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
+        imageHeight = minImgaeLength;
+    }
+
+    CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
+
+    float unitX = imageWidth / chipRegionWidth,
+          unitY = imageHeight / chipRegionHeight;
+
+    for (Module *curTerminal : db->dbTerminals)
+    {
+        assert(curTerminal);
+        // ignore pin's location
+        if (curTerminal->isNI)
+        {
+            continue;
+        }
+        int x1 = getX(db->chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
+        int x2 = getX(db->chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
+        int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
+        int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
+        img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
+    }
+
+    for (Module *curNode : db->dbNodes)
+    {
+        assert(curNode);
+        int x1 = getX(db->chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+        int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+        int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+        int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
+        img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+    }
+
+    if (gArg.CheckExist("debug") && gArg.CheckExist("fullPlot"))
+    {
+        for (Module *curNode : ePlaceFillers)
+        {
+            assert(curNode);
+            int x1 = getX(db->chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+            int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+            int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+            int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
+            img.draw_rectangle(x1, y1, x2, y2, Green, opacity);
+        }
+    }
+
+    img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
+    img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
+    cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
 }
 
 void EPlacer_2D::binNodeDensityUpdate()
@@ -641,9 +709,9 @@ void EPlacer_2D::binNodeDensityUpdate()
         binStartIdx.y = INT_DOWN((rectForCurNode.ll.y - db->coreRegion.ll.y) / binStep.y);
         binEndIdx.y = INT_DOWN((rectForCurNode.ur.y - db->coreRegion.ll.y) / binStep.y);
 
-        if(!(binStartIdx.x>=0))
+        if (!(binStartIdx.x >= 0))
         {
-            cout<<"Module pos: "<<rectForCurNode.ll<<" "<<db->coreRegion.ll<<endl;
+            cout << "Module pos: " << rectForCurNode.ll << " " << db->coreRegion.ll << endl;
         }
         assert(binStartIdx.x >= 0);
         assert(binEndIdx.x >= 0);

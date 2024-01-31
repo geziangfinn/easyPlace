@@ -5,7 +5,7 @@
 #include "global.h"
 #include "placedb.h"
 #include "arghandler.h"
-#include "plot.h"
+
 using Eigen::VectorXf;
 typedef Eigen::SparseMatrix<float, Eigen::RowMajor> SMatrix;
 typedef Eigen::Triplet<float> T;
@@ -25,9 +25,7 @@ public:
         db = _db;
     }
     PlaceDB *db;
-    Plotter *plotter;
 
-    void setPlotter(Plotter*);
     void quadraticPlacement();
 
     void createSparseMatrix(SMatrix &X_A, SMatrix &Y_A, VectorXf &X_x, VectorXf &Y_x, VectorXf &X_b, VectorXf &Y_b); //! solve Ax=b for X and Y coordinates. Create A,x and b, see kraftwerk2 for more details

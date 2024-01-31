@@ -18,10 +18,8 @@ public:
     Optimizer();
     Optimizer(EPlacer_2D* placer,bool verbose);
     void DoNesterovOpt();
-    void setPlotter(Plotter*);
 
 private:
-    Plotter * plotter;
     bool verbose;
     EPlacer_2D* placer;
     vector<POS_3D> curIterModulePosition; //uk

@@ -1,6 +1,7 @@
 #ifndef PLACEDB_H
 #define PLACEDB_H
 #include "objects.h"
+#include "plot.h"
 class PlaceDB
 {
 public:
@@ -75,5 +76,7 @@ public:
     void outputPL();
     void outputNets();
     void outputSCL();
+
+    void plotCurrentPlacement(string);
 };
 #endif

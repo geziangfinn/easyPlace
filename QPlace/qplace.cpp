@@ -4,10 +4,6 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <unsupported/Eigen/IterativeSolvers>
 using namespace Eigen;
-void QPPlacer::setPlotter(Plotter *_plotter)
-{
-    plotter = _plotter;
-}
 void QPPlacer::quadraticPlacement()
 {
     // TESTING, one HPWL can be removed in the future
@@ -65,8 +61,7 @@ void QPPlacer::quadraticPlacement()
 
         if (gArg.CheckExist("debug") || gArg.CheckExist("fullPlot"))
         {
-            assert(plotter);
-            plotter->plotCurrentPlacement("Initial placement iteration " + to_string(i));
+            db->plotCurrentPlacement("Initial placement iteration " + to_string(i));
         }
 
         time_end(&qp_time);
