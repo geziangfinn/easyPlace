@@ -167,7 +167,7 @@ void EPlacer_2D::binInitialization()
     // bin dimension upper bound: 1024 rather than 2048
     // for (int i = 1; i <= 10; i++)
     // { //! 4*4,8*8,16*16,32*32..., 2048*2048
-    for (int i = 1; i <= 10; i++)
+    for (int i = 1; i < 10; i++)
     { //! 4*4,8*8,16*16,32*32..., 1024*1024
         if ((2 << i) * (2 << i) <= idealBinCount &&
             (2 << (i + 1)) * (2 << (i + 1)) > idealBinCount)

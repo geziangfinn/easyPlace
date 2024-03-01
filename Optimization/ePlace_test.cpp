@@ -79,7 +79,12 @@ int main(int argc, char *argv[])
     eplacer->initialization();
 
     Optimizer *opt = new Optimizer(eplacer, true);
+
+    time_start(&initializationTime);
     opt->DoNesterovOpt();
+    time_end(&initializationTime);
+
+    cout << "Optimization time: " << initializationTime << endl;
 
     placedb->outputBookShelf();
 

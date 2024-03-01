@@ -279,7 +279,7 @@ inline bool float_less(float a, float b) // return true if a < b
 }
 inline bool float_equal(float a, float b)
 {
-    return fabs(a - b) < EPS;
+    return std::fabs(a - b) < EPS;
 }
 
 inline bool float_lessorequal(float a, float b)
