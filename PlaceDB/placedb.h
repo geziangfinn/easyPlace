@@ -62,6 +62,7 @@ public:
 
     double calcHPWL();
     double calcWA_Wirelength_2D(VECTOR_2D);
+    double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement

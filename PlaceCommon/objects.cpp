@@ -131,6 +131,89 @@ void Net::clearBoundPins()
     boundPinZmin = NULL;
 }
 
+double Net::calcWirelengthLSE_2D(VECTOR_2D invertedGamma)
+{
+    VECTOR_2D sumMax;
+    VECTOR_2D sumMin;
+    sumMax.SetZero();
+    sumMin.SetZero();
+
+    assert(boundPinXmax);
+    assert(boundPinXmin);
+    assert(boundPinYmax);
+    assert(boundPinYmin);
+
+    float pinMaxX = boundPinXmax->getAbsolutePos().x;
+    float pinMaxY = boundPinYmax->getAbsolutePos().y;
+
+    float pinMinX = boundPinXmin->getAbsolutePos().x;
+    float pinMinY = boundPinYmin->getAbsolutePos().y;
+
+    for (Pin *curPin : netPins)
+    {
+        POS_3D pinPosition = curPin->getAbsolutePos();
+        VECTOR_2D expMax;                                       
+        VECTOR_2D expMin;                                       
+        expMax.x = (pinPosition.x - pinMaxX) * invertedGamma.x; 
+        expMin.x = (pinMinX - pinPosition.x) * invertedGamma.x; 
+        expMax.y = (pinPosition.y - pinMaxY) * invertedGamma.y;
+        expMin.y = (pinMinY - pinPosition.y) * invertedGamma.y;
+        
+        if (expMax.x > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMax_LSE.x = fastExp(expMax.x);
+            sumMax.x += curPin->eMax_LSE.x;
+            curPin->expZeroFlgMax_LSE.x = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMax_LSE.x = true;
+        }
+
+        if (expMin.x > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMin_LSE.x = fastExp(expMin.x);
+            sumMin.x += curPin->eMin_LSE.x;
+            curPin->expZeroFlgMin_LSE.x = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMin_LSE.x = true;
+        }
+
+        if (expMax.y > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMax_LSE.y = fastExp(expMax.y);
+            sumMax.y += curPin->eMax_LSE.y;
+            curPin->expZeroFlgMax_LSE.y = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMax_LSE.y = true;
+        }
+
+        if (expMin.y > NEGATIVE_MAX_EXP)
+        {
+            curPin->eMin_LSE.y = fastExp(expMin.y);
+            sumMin.y += curPin->eMin_LSE.y;
+            curPin->expZeroFlgMin_LSE.y = false;
+        }
+        else
+        {
+            curPin->expZeroFlgMin_LSE.y = true;
+        }
+    }
+
+    sumMax_LSE.x = sumMax.x;
+    sumMax_LSE.y = sumMax.y;
+    sumMin_LSE.x = sumMin.x;
+    sumMin_LSE.y = sumMin.y;
+
+    return (pinMaxX-pinMinX+log(sumMax.x)/invertedGamma.x+log(sumMin.x)/invertedGamma.x)+
+           (pinMaxY-pinMinY+log(sumMax.y)/invertedGamma.y+log(sumMin.y)/invertedGamma.y);
+
+}
+
 double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
 {
     VECTOR_2D numeratorMax;
@@ -282,6 +365,22 @@ VECTOR_2D Net::getWirelengthGradientWA_2D(VECTOR_2D invertedGamma, Pin *curPin)
             (gradientNumeratorMin.y * denominatorMin_WA.y + gradientDenominatorMin.y * numeratorMin_WA.y) /
             (denominatorMin_WA.y * denominatorMin_WA.y);
     }
+
+    gradientOnCurrentPin.x = gradientMax.x - gradientMin.x;
+    gradientOnCurrentPin.y = gradientMax.y - gradientMin.y;
+    return gradientOnCurrentPin;
+}
+
+VECTOR_2D Net::getWirelengthGradientLSE_2D(VECTOR_2D invertedGamma, Pin *curPin)
+{
+    VECTOR_2D gradientOnCurrentPin = VECTOR_2D();
+    VECTOR_2D gradientMax = VECTOR_2D();            // the gradient added by positive term
+    VECTOR_2D gradientMin = VECTOR_2D();            // the gradient added by negative term
+
+    gradientMax.x = (curPin->expZeroFlgMax_LSE.x ? 0 : curPin->eMax_LSE.x ) / sumMax_LSE.x;
+    gradientMin.x = (curPin->expZeroFlgMin_LSE.x ? 0 : curPin->eMin_LSE.x ) / sumMin_LSE.x;
+    gradientMax.y = (curPin->expZeroFlgMax_LSE.y ? 0 : curPin->eMax_LSE.y ) / sumMax_LSE.y;
+    gradientMin.y = (curPin->expZeroFlgMin_LSE.y ? 0 : curPin->eMin_LSE.y ) / sumMin_LSE.y;
 
     gradientOnCurrentPin.x = gradientMax.x - gradientMin.x;
     gradientOnCurrentPin.y = gradientMax.y - gradientMin.y;

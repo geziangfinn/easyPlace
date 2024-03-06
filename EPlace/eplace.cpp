@@ -393,22 +393,42 @@ void EPlacer_2D::wirelengthGradientUpdate()
     // so update X/Y/Z max and min in all nets first, see ntuplace3D paper page 6: Stable Weighted-Average Wirelength Model
     // Also the numerators and denominators are pre-calculated for all nets for further use
     double HPWL = db->calcNetBoundPins();
-    double WA = db->calcWA_Wirelength_2D(invertedGamma);
-
-    int index = 0;
-    for (Module *curNode : db->dbNodes) // use ePlaceNodesAndFillers?
-    {
-        assert(curNode->idx == index);
-        wirelengthGradient[index].SetZero(); //! clear before updating
-        for (Pin *curPin : curNode->modulePins)
+    
+    if(gArg.CheckExist("LSE")){
+        double LSE = db->calcLSE_Wirelength_2D(invertedGamma);
+        int index = 0;
+        for (Module *curNode : db->dbNodes) // use ePlaceNodesAndFillers?
         {
-            VECTOR_2D gradient;
-            gradient = curPin->net->getWirelengthGradientWA_2D(invertedGamma, curPin);
-            wirelengthGradient[index].x += gradient.x;
-            wirelengthGradient[index].y += gradient.y;
-            // get the wirelength gradient of this pin
+            assert(curNode->idx == index);
+            wirelengthGradient[index].SetZero(); //! clear before updating
+            for (Pin *curPin : curNode->modulePins)
+            {
+                VECTOR_2D gradient;
+                gradient = curPin->net->getWirelengthGradientLSE_2D(invertedGamma, curPin);
+                wirelengthGradient[index].x += gradient.x;
+                wirelengthGradient[index].y += gradient.y;
+                // get the wirelength gradient of this pin
+            }
+            index++;
+        } 
+    }
+    else {
+        double WA = db->calcWA_Wirelength_2D(invertedGamma);
+        int index = 0;
+        for (Module *curNode : db->dbNodes) // use ePlaceNodesAndFillers?
+        {
+            assert(curNode->idx == index);
+            wirelengthGradient[index].SetZero(); //! clear before updating
+            for (Pin *curPin : curNode->modulePins)
+            {
+                VECTOR_2D gradient;
+                gradient = curPin->net->getWirelengthGradientWA_2D(invertedGamma, curPin);
+                wirelengthGradient[index].x += gradient.x;
+                wirelengthGradient[index].y += gradient.y;
+                // get the wirelength gradient of this pin
+            }
+            index++;
         }
-        index++;
     }
 }
 

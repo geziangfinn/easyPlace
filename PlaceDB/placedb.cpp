@@ -207,6 +207,16 @@ double PlaceDB::calcWA_Wirelength_2D(VECTOR_2D invertedGamma)
     return WA;
 }
 
+double PlaceDB::calcLSE_Wirelength_2D(VECTOR_2D invertedGamma)
+{
+    double LSE = 0;
+    for (Net *curNet : dbNets)
+    {
+        LSE += curNet->calcWirelengthLSE_2D(invertedGamma);
+    }
+    return LSE;
+}
+
 double PlaceDB::calcNetBoundPins()
 {
     double HPWL = 0;

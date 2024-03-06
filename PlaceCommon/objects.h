@@ -41,6 +41,10 @@ public:
     VECTOR_3D numeratorMin_WA;
     VECTOR_3D denominatorMin_WA;
 
+    VECTOR_3D sumMax_LSE;
+    VECTOR_3D sumMin_LSE;
+
+
     void init()
     {
         idx = 0;
@@ -58,7 +62,9 @@ public:
     double calcBoundPin();
     void clearBoundPins();
     double calcWirelengthWA_2D(VECTOR_2D);
+    double calcWirelengthLSE_2D(VECTOR_2D);
     VECTOR_2D getWirelengthGradientWA_2D(VECTOR_2D, Pin *);
+    VECTOR_2D getWirelengthGradientLSE_2D(VECTOR_2D, Pin *);
 };
 
 class Pin
@@ -99,6 +105,11 @@ public:
     VECTOR_3D eMax_WA;               // e^[(Xi-Xmax)/gamma] in WA model (X/Y/Z)
     VECTOR_3D_BOOL expZeroFlgMax_WA; // indicate if (Xi-Xmax)/gamma is too small that e^[(Xi-Xmax)/gamma] == 0
     VECTOR_3D_BOOL expZeroFlgMin_WA; // similar
+
+    VECTOR_3D eMin_LSE;             // e^[(Xmin-Xi)/gamma] in LSE model
+    VECTOR_3D eMax_LSE;             // e^[(Xi-Xmax)/gamma] in LSE model
+    VECTOR_3D_BOOL expZeroFlgMax_LSE; // indicate if (Xi-Xmax)/gamma is too small that e^[(Xi-Xmax)/gamma] == 0
+    VECTOR_3D_BOOL expZeroFlgMin_LSE; // similar
 
     void setId(int);
     void setNet(Net *);
