@@ -12,6 +12,17 @@
 #define MAX_ITERATION 3000
 #define BKTRK_EPS 0.95
 
+template <typename P,typename G>
+class NSIter
+{
+public:
+    NSIter();
+    NSIter(uint32_t size);
+    vector<P> mainSolution;
+    vector<P> referenceSolution;
+    vector<G> gradient;
+};
+
 class Optimizer 
 {
 public:
@@ -22,11 +33,7 @@ public:
 private:
     bool verbose;
     EPlacer_2D* placer;
-    vector<POS_3D> curIterModulePosition; //uk
-    vector<POS_3D> lastIterReferencePosition;  //vk-1
-    vector<POS_3D> curIterReferencePosition; //vk
-    vector<VECTOR_2D> lastIterPreconditionedGradient; //pre_vk-1
-    vector<VECTOR_2D> preconditionedGradient;
+    NSIter<POS_3D,VECTOR_2D> curNSIter,lastNSIter;
     float nesterovOptimizationParameter;
     float penaltyFactor;
     float lastIterHPWL;
@@ -39,8 +46,11 @@ private:
     void CalcPreconditionedGradient();
     void NesterovIterBkTrk();
     void UpdatePenaltyFactor();
+    void PlacerStateInit();
+    void PlacerStateUpdate();
     void PrintStatistics();
 
 };
+
 
 #endif
