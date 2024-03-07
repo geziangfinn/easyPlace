@@ -59,6 +59,7 @@ public:
     void setModuleCenter_2D(Module *, float, float);
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
+    void randomPlacment();
 
     double calcHPWL();
     double calcWA_Wirelength_2D(VECTOR_2D);
