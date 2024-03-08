@@ -59,6 +59,7 @@ public:
     void setModuleCenter_2D(Module *, float, float);
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
+    void randomPlacment();
 
     POS_3D getValidModuleCenter_2D(Module* module, float x, float y);
 

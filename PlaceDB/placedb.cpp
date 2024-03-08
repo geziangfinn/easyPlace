@@ -215,6 +215,14 @@ void PlaceDB::setModuleLocation_2D_random(Module *module)
     setModuleLocation_2D(module, x, y);
 }
 
+void PlaceDB::randomPlacment()
+{
+    for (Module *curModule : dbNodes)
+    {
+        setModuleLocation_2D_random(curModule);
+    }
+}
+
 double PlaceDB::calcHPWL() //! parallel this?
 {
     double HPWL = 0;
@@ -669,20 +677,20 @@ void PlaceDB::plotCurrentPlacement(string imageName)
         {
             continue;
         }
-        int x1 = getX(chipRegion.ll.x,  curTerminal->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(chipRegion.ll.x,  curTerminal->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight,chipRegion.ll.y,  curTerminal->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight,chipRegion.ll.y,  curTerminal->getUR_2D().y, unitY) + yMargin;
+        int x1 = getX(chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
+        int x2 = getX(chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
+        int y1 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
+        int y2 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
         img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
     }
 
     for (Module *curNode : dbNodes)
     {
         assert(curNode);
-        int x1 = getX(chipRegion.ll.x,  curNode->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(chipRegion.ll.x,  curNode->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight,chipRegion.ll.y,  curNode->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight,chipRegion.ll.y,  curNode->getUR_2D().y, unitY) + yMargin;
+        int x1 = getX(chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+        int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+        int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+        int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
         img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
     }
 

@@ -393,8 +393,9 @@ void EPlacer_2D::wirelengthGradientUpdate()
     // so update X/Y/Z max and min in all nets first, see ntuplace3D paper page 6: Stable Weighted-Average Wirelength Model
     // Also the numerators and denominators are pre-calculated for all nets for further use
     double HPWL = db->calcNetBoundPins();
-    
-    if(gArg.CheckExist("LSE")){
+
+    if (gArg.CheckExist("LSE"))
+    {
         double LSE = db->calcLSE_Wirelength_2D(invertedGamma);
         int index = 0;
         for (Module *curNode : db->dbNodes) // use ePlaceNodesAndFillers?
@@ -410,9 +411,10 @@ void EPlacer_2D::wirelengthGradientUpdate()
                 // get the wirelength gradient of this pin
             }
             index++;
-        } 
+        }
     }
-    else {
+    else
+    {
         double WA = db->calcWA_Wirelength_2D(invertedGamma);
         int index = 0;
         for (Module *curNode : db->dbNodes) // use ePlaceNodesAndFillers?
@@ -687,7 +689,7 @@ void EPlacer_2D::binNodeDensityUpdate()
     segmentFaultCP("nodeDensity");
     for (Module *curNode : ePlaceNodesAndFillers) // ePlaceNodes: nodes and filler nodes
     {
-        bool localSmooth = false;
+        bool localSmooth = false;         //! local smooth is applied only to std cells, is this right?
         bool macroDensityScaling = false; // density scaling, see ePlace paper
 
         VECTOR_2D localSmoothLengthScale; // see ePlace paper page 15 or RePlace opt.cpp line 1460

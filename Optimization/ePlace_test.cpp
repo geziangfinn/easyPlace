@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
         gArg.GetString("outputPL", &outputPLPath);
         gArg.GetString("outputPath", &outputPath);
         gArg.GetString("benchmarkName", &benchmarkName);
-        string cmd = legalizerPath + "/ntuplace3" + " -aux " + outputAUXPath + " -loadpl " + outputPLPath + " -noglobal" + " -out " + outputPath + "/" + benchmarkName;
+        string cmd = legalizerPath + "/ntuplace3" + " -aux " + outputAUXPath + " -loadpl " + outputPLPath + " -noglobal" + " -out " + outputPath + "/" + benchmarkName+" > "+outputPath + "/Results.txt";
         cout << RED << "Running legalizer: " << cmd << RESET << endl;
         system(cmd.c_str());
     }
