@@ -17,6 +17,8 @@ template <typename P,typename G>
 class NSIter
 {
 public:
+    NSIter(){};
+    const NSIter<P,G>& operator=(const NSIter& other);
     void resize(uint32_t size);
     vector<P> mainSolution;
     vector<P> referenceSolution;

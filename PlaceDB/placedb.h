@@ -60,6 +60,8 @@ public:
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
 
+    POS_3D getValidModuleCenter_2D(Module* module, float x, float y);
+
     double calcHPWL();
     double calcWA_Wirelength_2D(VECTOR_2D);
     double calcLSE_Wirelength_2D(VECTOR_2D);

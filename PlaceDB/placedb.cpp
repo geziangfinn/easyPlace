@@ -160,6 +160,34 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     module->setCenter_2D(x, y);
 }
 
+POS_3D PlaceDB::getValidModuleCenter_2D(Module* module, float x, float y)
+{
+    if (x - 0.5 * module->width < coreRegion.ll.x)
+    {
+        // x = coreRegion.ll.x + 0.5 * module->width;
+        x = coreRegion.ll.x + 0.5 * module->width + EPS;
+    }
+    if (x + 0.5 * module->width > coreRegion.ur.x)
+    {
+        // x = coreRegion.ur.x - 0.5 * module->width;
+        x = coreRegion.ur.x - 0.5 * module->width - EPS;
+    }
+    if (y - 0.5 * module->height < coreRegion.ll.y)
+    {
+        // y = coreRegion.ll.y + 0.5 * module->height;
+        y = coreRegion.ll.y + 0.5 * module->height + EPS;
+    }
+    if (y + 0.5 * module->height > coreRegion.ur.y)
+    {
+        // y = coreRegion.ur.y - 0.5 * module->height;
+        y = coreRegion.ur.y - 0.5 * module->height - EPS;
+    }
+    POS_3D validPosition;
+    validPosition.x = x;
+    validPosition.y = y;
+    return validPosition;
+}
+
 void PlaceDB::setModuleOrientation(Module *module, int orientation)
 {
     module->setOrientation(orientation);
