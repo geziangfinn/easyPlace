@@ -6,20 +6,21 @@
 
 VECTOR_2D CalcLipschitzConstant_2D(const vector<POS_3D> &curV, const vector<POS_3D> &lastV, const vector<VECTOR_2D> &curPreconditionedGradient, const vector<VECTOR_2D> &lastPreconditionedGradient);
 
-template <typename P,typename G>
-void NSIter<P,G>::resize(uint32_t size){
+template <typename P, typename G>
+void NSIter<P, G>::resize(uint32_t size)
+{
     mainSolution.resize(size);
     referenceSolution.resize(size);
     gradient.resize(size);
 }
 
-template <typename P,typename G>
-const NSIter<P,G>& NSIter<P,G>::operator=(const NSIter& other){
-    this->mainSolution.assign(other.mainSolution.begin(),other.mainSolution.end());
-    this->referenceSolution.assign(other.referenceSolution.begin(),other.referenceSolution.end());
-    this->gradient.assign(other.gradient.begin(),other.gradient.end());
+template <typename P, typename G>
+const NSIter<P, G> &NSIter<P, G>::operator=(const NSIter &other)
+{
+    this->mainSolution.assign(other.mainSolution.begin(), other.mainSolution.end());
+    this->referenceSolution.assign(other.referenceSolution.begin(), other.referenceSolution.end());
+    this->gradient.assign(other.gradient.begin(), other.gradient.end());
 }
-
 
 Optimizer::Optimizer(EPlacer_2D *placer, bool verbose)
 {
@@ -48,7 +49,8 @@ void Optimizer::Init()
     curNSIter.gradient = preconditionedGradient;
 }
 
-void Optimizer::PlacerStateInit(){
+void Optimizer::PlacerStateInit()
+{
     placer->binNodeDensityUpdate();
     placer->densityGradientUpdate();
     placer->wirelengthGradientUpdate();
@@ -56,7 +58,8 @@ void Optimizer::PlacerStateInit(){
     placer->totalGradientUpdate(penaltyFactor);
 }
 
-void Optimizer::PlacerStateUpdate(){
+void Optimizer::PlacerStateUpdate()
+{
     placer->binNodeDensityUpdate();
     placer->densityGradientUpdate();
     placer->wirelengthGradientUpdate();
@@ -74,7 +77,7 @@ void Optimizer::DoNesterovOpt()
         }
 
         NesterovIter();
-        
+
         if (gArg.CheckExist("fullPlot") && iterCount % 10 == 0)
         {
             placer->plotCurrentPlacement("Ite_" + to_string(iterCount));
@@ -86,10 +89,10 @@ void Optimizer::NesterovIter()
 {
     uint32_t movableModuleSize = placer->ePlaceNodesAndFillers.size();
     VECTOR_2D stepSize;
-    NSIter<POS_3D,VECTOR_2D> newNSIter;
+    NSIter<POS_3D, VECTOR_2D> newNSIter;
     newNSIter.resize(movableModuleSize);
 
-    //calculate initial stepsize
+    // calculate initial stepsize
     if (iterCount == 0)
     {
         stepSize.x = 0.01;
@@ -97,20 +100,21 @@ void Optimizer::NesterovIter()
     }
     else
     {
-        VECTOR_2D lipshitzConstant = CalcLipschitzConstant_2D(curNSIter.referenceSolution,lastNSIter.referenceSolution,curNSIter.gradient,lastNSIter.gradient);
+        VECTOR_2D lipshitzConstant = CalcLipschitzConstant_2D(curNSIter.referenceSolution, lastNSIter.referenceSolution, curNSIter.gradient, lastNSIter.gradient);
         stepSize.x = 1 / lipshitzConstant.x;
         stepSize.y = 1 / lipshitzConstant.y;
     }
-    cout << "Step size: " << stepSize << endl << endl;
+    cout << "Step size: " << stepSize << endl
+         << endl;
 
-    //calculate optimization paramter
+    // calculate optimization paramter
     float newOptimizationParameter = (1 + sqrt(4 * float_square(nesterovOptimizationParameter) + 1)) / 2; // ak+1
 
-    //update module postion
+    // update module postion
     for (uint32_t idx = 0; idx < placer->ePlaceNodesAndFillers.size(); idx++)
     {
-        POS_3D& newPosition = newNSIter.mainSolution[idx];
-        POS_3D& newReferencePosition = newNSIter.referenceSolution[idx];
+        POS_3D &newPosition = newNSIter.mainSolution[idx];
+        POS_3D &newReferencePosition = newNSIter.referenceSolution[idx];
 
         VECTOR_2D gradient = curNSIter.gradient[idx];
         POS_3D curPosition = curNSIter.mainSolution[idx];
@@ -120,51 +124,53 @@ void Optimizer::NesterovIter()
                                                           curReferencePosition.x + stepSize.x * gradient.x,
                                                           curReferencePosition.y + stepSize.y * gradient.y);
         newReferencePosition = placer->db->getValidModuleCenter_2D(placer->ePlaceNodesAndFillers[idx],
-                                                                   newPosition.x + (nesterovOptimizationParameter - 1) * (newPosition.x - curPosition.x) / newOptimizationParameter,         
-                                                                   newPosition.y + (nesterovOptimizationParameter - 1) * (newPosition.y - curPosition.y) / newOptimizationParameter);    
+                                                                   newPosition.x + (nesterovOptimizationParameter - 1) * (newPosition.x - curPosition.x) / newOptimizationParameter,
+                                                                   newPosition.y + (nesterovOptimizationParameter - 1) * (newPosition.y - curPosition.y) / newOptimizationParameter);
 
-        placer->db->setModuleCenter_2D(placer->ePlaceNodesAndFillers[idx],newReferencePosition.x,newReferencePosition.y);        
-
+        placer->db->setModuleCenter_2D(placer->ePlaceNodesAndFillers[idx], newReferencePosition.x, newReferencePosition.y);
     }
     PlacerStateUpdate();
 
-    if(gArg.CheckExist("bktrk")){
-        while(true){
+    if (gArg.CheckExist("bktrk"))
+    {
+        while (true)
+        {
             placer->totalGradientUpdate(penaltyFactor);
             CalcPreconditionedGradient();
             newNSIter.gradient = preconditionedGradient;
-            VECTOR_2D newLipschitzConstant = CalcLipschitzConstant_2D(newNSIter.referenceSolution,curNSIter.referenceSolution,newNSIter.gradient,curNSIter.gradient);
+            VECTOR_2D newLipschitzConstant = CalcLipschitzConstant_2D(newNSIter.referenceSolution, curNSIter.referenceSolution, newNSIter.gradient, curNSIter.gradient);
             VECTOR_2D newStepSize;
             newStepSize.x = 1 / newLipschitzConstant.x;
             newStepSize.y = 1 / newLipschitzConstant.y;
-            if (BKTRK_EPS * stepSize.x <= newStepSize.x || BKTRK_EPS * stepSize.y <= newStepSize.y){
+            if (BKTRK_EPS * stepSize.x <= newStepSize.x || BKTRK_EPS * stepSize.y <= newStepSize.y)
+            {
                 break;
             }
             stepSize.x = newStepSize.x;
             stepSize.y = newStepSize.y;
             for (uint32_t idx = 0; idx < placer->ePlaceNodesAndFillers.size(); idx++)
             {
-                POS_3D& newPosition = newNSIter.mainSolution[idx];
-                POS_3D& newReferencePosition = newNSIter.referenceSolution[idx];
+                POS_3D &newPosition = newNSIter.mainSolution[idx];
+                POS_3D &newReferencePosition = newNSIter.referenceSolution[idx];
 
                 VECTOR_2D gradient = curNSIter.gradient[idx];
                 POS_3D curPosition = curNSIter.mainSolution[idx];
                 POS_3D curReferencePosition = curNSIter.referenceSolution[idx];
 
                 newPosition = placer->db->getValidModuleCenter_2D(placer->ePlaceNodesAndFillers[idx],
-                                                                    curReferencePosition.x + stepSize.x * gradient.x,
-                                                                curReferencePosition.y + stepSize.y * gradient.y);
+                                                                  curReferencePosition.x + stepSize.x * gradient.x,
+                                                                  curReferencePosition.y + stepSize.y * gradient.y);
                 newReferencePosition = placer->db->getValidModuleCenter_2D(placer->ePlaceNodesAndFillers[idx],
-                                                                        newPosition.x + (nesterovOptimizationParameter - 1) * (newPosition.x - curPosition.x) / newOptimizationParameter,         
-                                                                        newPosition.y + (nesterovOptimizationParameter - 1) * (newPosition.y - curPosition.y) / newOptimizationParameter);    
+                                                                           newPosition.x + (nesterovOptimizationParameter - 1) * (newPosition.x - curPosition.x) / newOptimizationParameter,
+                                                                           newPosition.y + (nesterovOptimizationParameter - 1) * (newPosition.y - curPosition.y) / newOptimizationParameter);
 
-                placer->db->setModuleCenter_2D(placer->ePlaceNodesAndFillers[idx],newReferencePosition.x,newReferencePosition.y);            
+                placer->db->setModuleCenter_2D(placer->ePlaceNodesAndFillers[idx], newReferencePosition.x, newReferencePosition.y);
             }
             PlacerStateUpdate();
         }
     }
 
-    //update this iteration
+    // update this iteration
     UpdatePenaltyFactor();
     placer->totalGradientUpdate(penaltyFactor);
     CalcPreconditionedGradient();
@@ -388,7 +394,7 @@ VECTOR_2D CalcLipschitzConstant_2D(const vector<POS_3D> &curV, const vector<POS_
     float squaredSumDenominatorY = 0;
     for (uint32_t idx = 0; idx < curV.size(); idx++)
     {
-        //printf("cur_ref=%.8f,last_ref=%.8f,cur_grad=%.8f,last_grad=%.8f\n",curV[idx].x,lastV[idx].x,curPreconditionedGradient[idx].x,lastPreconditionedGradient[idx].x);
+        // printf("cur_ref=%.8f,last_ref=%.8f,cur_grad=%.8f,last_grad=%.8f\n",curV[idx].x,lastV[idx].x,curPreconditionedGradient[idx].x,lastPreconditionedGradient[idx].x);
         squaredSumNumeratorX += float_square(curPreconditionedGradient[idx].x - lastPreconditionedGradient[idx].x);
         squaredSumDenominatorX += float_square(curV[idx].x - lastV[idx].x);
 

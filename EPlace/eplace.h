@@ -85,11 +85,11 @@ public:
 
     vector<VECTOR_2D> wirelengthGradient; // store wirelength gradient for nodes only(wirelength gradient for filler is always 0)
     vector<VECTOR_2D> densityGradient;    // store density gradient for fillers nodes (wirelength gradient for filler node is always 0)
-    vector<VECTOR_2D> totalGradient;// total gradient of objective function f including gradients of all components
+    vector<VECTOR_2D> totalGradient;      // total gradient of objective function f including gradients of all components
 
     float targetDensity;         //!!!!!! so important
     float globalDensityOverflow; // !!!!! so important, tau
-    VECTOR_2D invertedGamma;         // gamma of the wa wirelength model,here we actually use 1/gamma, following RePlAce. gamma is different for different dimension
+    VECTOR_2D invertedGamma;     // gamma of the wa wirelength model,here we actually use 1/gamma, following RePlAce. gamma is different for different dimension
 
     void init()
     {
@@ -99,7 +99,7 @@ public:
 
         targetDensity = 0;
         globalDensityOverflow = 0;
-        invertedGamma .SetZero();
+        invertedGamma.SetZero();
 
         ePlaceStdCellArea = 0;
         ePlaceMacroArea = 0;
@@ -125,7 +125,7 @@ public:
     void densityGradientUpdate();
     void totalGradientUpdate(float);
 
-    float penaltyFactorInitilization(); //initialize lambda 0, see ePlace paper equation 35
+    float penaltyFactorInitilization(); // initialize lambda 0, see ePlace paper equation 35
     //! be aware of density scaling and local smooth in density calculation
 
     void plotCurrentPlacement(string);
