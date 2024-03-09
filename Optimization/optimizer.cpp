@@ -14,13 +14,13 @@ void NSIter<P, G>::resize(uint32_t size)
     gradient.resize(size);
 }
 
-template <typename P, typename G>
-const NSIter<P, G> &NSIter<P, G>::operator=(const NSIter &other)
-{
-    this->mainSolution.assign(other.mainSolution.begin(), other.mainSolution.end());
-    this->referenceSolution.assign(other.referenceSolution.begin(), other.referenceSolution.end());
-    this->gradient.assign(other.gradient.begin(), other.gradient.end());
-}
+// template <typename P, typename G>
+// // const NSIter<P, G> &NSIter<P, G>::operator=(const NSIter &other)
+// // {
+// //     this->mainSolution.assign(other.mainSolution.begin(), other.mainSolution.end());
+// //     this->referenceSolution.assign(other.referenceSolution.begin(), other.referenceSolution.end());
+// //     this->gradient.assign(other.gradient.begin(), other.gradient.end());
+// // }
 
 Optimizer::Optimizer(EPlacer_2D *placer, bool verbose)
 {

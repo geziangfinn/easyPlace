@@ -1,4 +1,5 @@
 # ePlace
+Authors: Ziang Ge and Yikai Liu from Shanghaitech University Supervisor: Prof. Pingqiang Zhou
 trying to reimplement ePlace and ePlace-3D according to ePlace(TODAES) and ePlace3D()
 
 TODO: consider orientation of nodes and terminals
