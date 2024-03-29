@@ -119,7 +119,7 @@ int BookshelfParser::ReadSCLFile(string file, PlaceDB &db)
 		}
 		else if (strcmp(tmp4, "Numsites") == 0 || strcmp(tmp4, "NumSites") == 0)
 		{
-			double subOrigin = atof(tmp3);
+			double subOrigin = atof(tmp3);//! subrowOrigin
 			double numSites = atof(tmp6);
 			// vSites.back().m_interval.push_back(atof(tmp3));
 			// vSites.back().m_interval.push_back((atof(tmp6) * SiteWidth) + atof(tmp3));//! tmp3: subrow origin!
