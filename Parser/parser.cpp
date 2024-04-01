@@ -32,7 +32,7 @@ int BookshelfParser::ReadFile(string file, PlaceDB &db)
 	ReadSCLFile(file_scl, db);	   // read core-row information
 	ReadNodesFile(file_nodes, db); // blocks & cell width/height
 	ReadNetsFile(file_nets, db);   // read net file
-	ReadPLFile(file_pl, db);	   // initial module locations
+	ReadPLFile(file_pl, db,true);	   // initial module locations
 	db.setChipRegion_2D();
 	return 0;
 }
@@ -119,7 +119,7 @@ int BookshelfParser::ReadSCLFile(string file, PlaceDB &db)
 		}
 		else if (strcmp(tmp4, "Numsites") == 0 || strcmp(tmp4, "NumSites") == 0)
 		{
-			double subOrigin = atof(tmp3);//! subrowOrigin
+			double subOrigin = atof(tmp3); //! subrowOrigin
 			double numSites = atof(tmp6);
 			// vSites.back().m_interval.push_back(atof(tmp3));
 			// vSites.back().m_interval.push_back((atof(tmp6) * SiteWidth) + atof(tmp3));//! tmp3: subrow origin!
@@ -209,17 +209,17 @@ int BookshelfParser::ReadNodesFile(string file, PlaceDB &db)
 		if (checkFormat == 2)
 			break;
 	}
-	nNodes =nModules-nTerminals;
+	nNodes = nModules - nTerminals;
 
 	if (checkFormat != 2)
 	{
 		cerr << "** Block file header error (miss NumNodes or NumTerminals)\n";
 	}
-	cout << "    NumModules: " << nModules<<endl;
+	cout << "    NumModules: " << nModules << endl;
 	cout << "    NumNodes: " << nNodes;
 	if (nNodes > 1000)
 
-	cout << " (= " << nNodes / 1000 << "k)";
+		cout << " (= " << nNodes / 1000 << "k)";
 	cout << endl;
 	cout << "    Terminals: " << nTerminals << endl;
 
@@ -459,12 +459,20 @@ int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
 	return 0;
 }
 
-int BookshelfParser::ReadPLFile(string file, PlaceDB &db)
+int BookshelfParser::ReadPLFile(string file, PlaceDB &db, bool init)
 {
-	cout << "Initialize position with file: " << file << "\n";
 	string path;
-	gArg.GetString("path", &path);
-	path += file;
+	if (init)
+	{
+		gArg.GetString("path", &path);
+		path += file;
+	}
+	else
+	{
+		path = file;
+	}
+
+	cout << "Initialize position with file: " << file << "\n";
 	ifstream in(path.c_str());
 	if (!in)
 	{

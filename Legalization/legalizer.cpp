@@ -2,7 +2,9 @@
 
 void AbacusLegalizer::legalization()
 {
+    segmentFaultCP("cp0");
     initialization();
+    segmentFaultCP("cp1");
     for (Module *curCell : dbCells)
     {
         double cost = DOUBLE_MAX; // current minimum cost
@@ -76,8 +78,11 @@ void AbacusLegalizer::legalization()
 
 void AbacusLegalizer::initialization()
 {
+    // segmentFaultCP("cp2");
     initializeCells();
+    // segmentFaultCP("cp3");
     initializeObstacles();
+    // segmentFaultCP("cp4");
     initializeSubrows();
 }
 
@@ -85,14 +90,16 @@ void AbacusLegalizer::initializeCells()
 {
     for (Module *curNode : placeDB->dbNodes)
     {
+        assert(curNode);
         if (!curNode->isMacro)
         {
             dbCells.push_back(curNode);
         }
     }
+    // segmentFaultCP("cp5");
     sort(dbCells.begin(), dbCells.end(), [=](Module *a, Module *b)
-         { return float_lessorequal(a->getLL_2D().x, b->getLL_2D().x); });
-
+         { return float_less(a->getLL_2D().x, b->getLL_2D().x); });
+    // segmentFaultCP("cp6");
     //? what's the potential bug when one cell is completely inside another? Should think about it.
 }
 

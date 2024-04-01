@@ -6,13 +6,12 @@ class BookshelfParser
 {
 public:
     int ReadFile(string file, PlaceDB &db);
-    int ReadPLFile(string file, PlaceDB &db);
+    int ReadPLFile(string file, PlaceDB &db, bool init);
 
 private:
     int ReadSCLFile(string file, PlaceDB &db);
     int ReadNodesFile(string file, PlaceDB &db);
     int ReadNetsFile(string file, PlaceDB &db);
-
 };
 
 class LEFDEFParser
