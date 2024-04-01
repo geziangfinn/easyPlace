@@ -40,9 +40,11 @@ public:
     AbacusRow()
     {
         clusters.clear();
+        width=0;
         // lastClusterIndex=-1;
     }
     vector<AbacusCellCluster> clusters;
+    double width;
     void addCell(int, Module *);
     void addCluster(int, int);
     void collapse(int);
