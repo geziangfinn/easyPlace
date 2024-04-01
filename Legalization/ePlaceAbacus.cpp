@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     gArg.GetString("outputPath", &outputPath);
     gArg.GetString("benchmarkName", &benchmarkName);
 
-    parser.ReadPLFile(outputPath + "/" + benchmarkName +"/" +benchmarkName+"-out.pl", *placedb, false);
+    parser.ReadPLFile(outputPath + "/" + benchmarkName + "/" + benchmarkName + "-out.pl", *placedb, false);
 
     AbacusLegalizer legalizer(placedb);
     legalizer.legalization();

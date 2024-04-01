@@ -19,14 +19,14 @@ public:
     void Init()
     {
         cells.clear();
-        index=-1;
-        x=0.0;
-        e=0.0;
-        w=0.0;
-        q=0.0;
+        index = -1;
+        x = 0.0;
+        e = 0.0;
+        w = 0.0;
+        q = 0.0;
     }
     vector<Module *> cells; // cells should be ordered by x coordinate(non decreasing)
-    int index;// its index in the vector clusters of class AbacusRow
+    int index;              // its index in the vector clusters of class AbacusRow
     // x,e,w,q of a cluster, see the abacus paper
     float x;
     float e;
@@ -40,16 +40,17 @@ public:
     AbacusRow()
     {
         clusters.clear();
-        //lastClusterIndex=-1;
+        // lastClusterIndex=-1;
     }
     vector<AbacusCellCluster> clusters;
-    void addCell(int,Module*);
-    void addCluster(int,int);
+    void addCell(int, Module *);
+    void addCluster(int, int);
     void collapse(int);
 };
 
 class AbacusLegalizer
 {
+    // strictly follow the abacus paper, read the paper for more details
 public:
     AbacusLegalizer()
     {
@@ -82,6 +83,6 @@ private:
 
 class MacroLegalizer
 {
-    // todo: build a macro legalizer
+    // todo: implement a macro legalizer
 };
 #endif
