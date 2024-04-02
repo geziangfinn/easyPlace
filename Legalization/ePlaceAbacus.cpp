@@ -67,12 +67,12 @@ int main(int argc, char *argv[])
 
     string outputPath;
     string benchmarkName;
-
+    placedb->outputBookShelf();
     gArg.GetString("outputPath", &outputPath);
     gArg.GetString("benchmarkName", &benchmarkName);
 
-    parser.ReadPLFile(outputPath + "/" + benchmarkName + "/" + benchmarkName + "-global.pl", *placedb, false);
-placedb->plotCurrentPlacement("global_RESULT");
+    parser.ReadPLFile(outputPath + "/" + benchmarkName + "-global.pl", *placedb, false);
+    placedb->plotCurrentPlacement("global_RESULT");
     AbacusLegalizer legalizer(placedb);
     legalizer.legalization();
     placedb->plotCurrentPlacement("LEGALIZED_RESULT");

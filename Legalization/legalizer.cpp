@@ -2,16 +2,11 @@
 
 void AbacusLegalizer::legalization()
 {
-    segmentFaultCP("cp0");
     initialization();
-    segmentFaultCP("cp1");
-    int cellCount=dbCells.size();
-    int cellNumber=0;
-    cout<<cellCount<<endl;
+    int cellCount = dbCells.size();
+    cout << cellCount << endl;
     for (Module *curCell : dbCells)
     {
-        cellNumber++;
-        assert(cellNumber<=cellCount);
         // cout<<curCell->name<<endl;
         double cost = DOUBLE_MAX; // current minimum cost
         //! assume subrows are sorted by y coordinate(non decreasing)
@@ -35,7 +30,7 @@ void AbacusLegalizer::legalization()
         for (int i = closestRowIndex; i < subrowCount; i++)
         {
             // cout<<"higher "<<i<<endl;
-            if(float_greater(subrows[i].width+curCell->getWidth(),subrows[i].end.x-subrows[i].start.x))
+            if (float_greater(subrows[i].width + curCell->getWidth(), subrows[i].end.x - subrows[i].start.x))
             {
                 continue;
             }
@@ -56,11 +51,11 @@ void AbacusLegalizer::legalization()
         for (int i = closestRowIndex - 1; i >= 0; i--)
         {
             // cout<<"lower "<<i<<endl;
-            if(i==0)
+            if (i == 0)
             {
                 break;
             }
-            if(float_greater(subrows[i].width+curCell->getWidth(),subrows[i].end.x-subrows[i].start.x))
+            if (float_greater(subrows[i].width + curCell->getWidth(), subrows[i].end.x - subrows[i].start.x))
             {
                 continue;
             }
@@ -76,6 +71,7 @@ void AbacusLegalizer::legalization()
                 cost = newCost;
             }
         }
+        assert(bestRowIndex != -1);
         // 3. place cell to the best row
         placeRow(curCell, bestRowIndex, ABACUS_FINAL);
     }
@@ -84,7 +80,6 @@ void AbacusLegalizer::legalization()
 
     for (AbacusRow curSubrow : subrows)
     {
-
         for (AbacusCellCluster curCluster : curSubrow.clusters)
         {
             int x = curCluster.x;
@@ -270,7 +265,7 @@ void AbacusLegalizer::initializeSubrows()
             double newLeft = ceil((iter->start.x - placeDB->coreRegion.ll.x) / siteStep) * siteStep + placeDB->coreRegion.ll.x;
             double newRight = floor((iter->end.x - placeDB->coreRegion.ll.x) / siteStep) * siteStep + placeDB->coreRegion.ll.x;
             double newSubrowWidth = newRight - newLeft;
-            assert(newSubrowWidth>=siteStep);
+            assert(newSubrowWidth >= siteStep);
             if (float_greater(newSubrowWidth, 0.0))
             {
                 iter->start.x = newLeft;
@@ -286,9 +281,9 @@ void AbacusLegalizer::initializeSubrows()
         }
     }
 
-    //sort subrows by y coordinate!
-    sort(subrows.begin(),subrows.end(),[=](AbacusRow a,AbacusRow b)
-    {
+    // sort subrows by y coordinate!
+    sort(subrows.begin(), subrows.end(), [=](AbacusRow a, AbacusRow b)
+         {
          if (!float_equal(a.bottom , b.bottom))
             {
                 return float_less(a.bottom , b.bottom);
@@ -319,7 +314,7 @@ double AbacusLegalizer::placeRow(Module *cell, int bestRow, bool trial)
     else if (trial == ABACUS_FINAL)
     {
         tempRowPointer = &subrows[bestRow];
-        tempRowPointer->width+=cell->getWidth();
+        tempRowPointer->width += cell->getWidth();
         // final place
     }
     else
@@ -346,15 +341,14 @@ double AbacusLegalizer::placeRow(Module *cell, int bestRow, bool trial)
 
         tempRowPointer->clusters.push_back(newCluster);
         tempRowPointer->addCell(newCluster.index, cell); // addCell: actually always add cell to the last cluster, that is, cluster.back()
+        tempRowPointer->collapse(newCluster.index);      //! this is missing in the abacus paper!
     }
     else
     {
         // cout<<cell->name<<"at here\n";
         tempRowPointer->addCell(tempRowPointer->clusters.back().index, cell); // addCell: actually always add cell to the last cluster, that is, cluster.back()
-         segmentFaultCP("k6");
         tempRowPointer->collapse(tempRowPointer->clusters.back().index);
     }
- segmentFaultCP("K2");
     //! operate with tempRowPointer
     // todo:calculate cell location and return cost!
     // here, cell must be in the last cluster
@@ -379,11 +373,8 @@ double AbacusLegalizer::placeRow(Module *cell, int bestRow, bool trial)
 void AbacusRow::addCell(int clusterIndex, Module *cell)
 {
     assert(clusterIndex < clusters.size());
-    segmentFaultCP("k3");
     AbacusCellCluster &c = clusters[clusterIndex];
- segmentFaultCP("k4");
     c.cells.push_back(cell);
-     segmentFaultCP("k5");
     c.e++;
     c.q += cell->getLL_2D().x - c.w;
     c.w += cell->getWidth();
@@ -405,7 +396,6 @@ void AbacusRow::collapse(int clusterIndex)
 {
     assert(clusterIndex < clusters.size());
     AbacusCellCluster &c = clusters[clusterIndex];
- segmentFaultCP("k7");
     // place c
     c.x = (int)(1.0 * c.q / c.e / step) * step;
     if (float_less(c.x, start.x))
@@ -416,20 +406,16 @@ void AbacusRow::collapse(int clusterIndex)
     {
         c.x = end.x - c.w;
     }
-    int predecessorIndex = clusterIndex-1;
+    int predecessorIndex = clusterIndex - 1;
     // cout<<"pindex here is: "<<predecessorIndex<<endl;
-     segmentFaultCP("k8");
     if (predecessorIndex >= 0)
     {
         AbacusCellCluster cPrime = clusters[predecessorIndex];
-         segmentFaultCP("k8.5");
         if (cPrime.x + cPrime.w > c.x) // actually comparing int here
         {
             addCluster(predecessorIndex, clusterIndex);
- segmentFaultCP("k9");
             assert(clusters[clusterIndex].index == clusterIndex); //!
- segmentFaultCP("k10");
-            clusters.erase(clusters.begin() + clusterIndex); segmentFaultCP("k11");
+            clusters.erase(clusters.begin() + clusterIndex);
 
             collapse(predecessorIndex);
         }
