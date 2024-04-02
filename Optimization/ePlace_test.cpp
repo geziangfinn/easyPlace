@@ -3,12 +3,13 @@
 #include "qplace.h"
 #include "eplace.h"
 #include "optimizer.h"
-// #include "plot.h"
+#include "legalizer.h"
 #include <iostream>
 using namespace std;
 
 int main(int argc, char *argv[])
 {
+    BookshelfParser parser;
     PlaceDB *placedb = new PlaceDB();
     gArg.Init(argc, argv);
 
@@ -42,9 +43,9 @@ int main(int argc, char *argv[])
             cout << "    Benchmark: " << benchmarkName << endl;
 
             string plotPath;
-            if(!gArg.GetString("plotPath", &plotPath))
+            if (!gArg.GetString("plotPath", &plotPath))
             {
-                plotPath="./";
+                plotPath = "./";
             }
 
             plotPath += "/" + benchmarkName + "/";
@@ -58,7 +59,6 @@ int main(int argc, char *argv[])
 
             cout << "    Plot path: " << plotPath << endl;
         }
-        BookshelfParser parser;
         parser.ReadFile(argv[2], *placedb);
     }
     placedb->showDBInfo();
@@ -86,8 +86,6 @@ int main(int argc, char *argv[])
 
     cout << "Optimization time: " << initializationTime << endl;
 
-    placedb->outputBookShelf();
-
     ///////////////////////////////////////////////////
     // legalization and detailed placement
     ///////////////////////////////////////////////////
@@ -96,6 +94,7 @@ int main(int argc, char *argv[])
 
     if (gArg.GetString("legalizerPath", &legalizerPath))
     {
+        placedb->outputBookShelf();
         string outputAUXPath;
         string outputPLPath;
         string outputPath;
@@ -105,8 +104,18 @@ int main(int argc, char *argv[])
         gArg.GetString("outputPL", &outputPLPath);
         gArg.GetString("outputPath", &outputPath);
         gArg.GetString("benchmarkName", &benchmarkName);
-        string cmd = legalizerPath + "/ntuplace3" + " -aux " + outputAUXPath + " -loadpl " + outputPLPath + " -noglobal" + " -out " + outputPath + "/" + benchmarkName+" > "+outputPath + "/Results.txt";
+        string cmd = legalizerPath + "/ntuplace3" + " -aux " + outputAUXPath + " -loadpl " + outputPLPath + " -noglobal" + " -out " + outputPath + "/" + benchmarkName + " > " + outputPath + "/Results.txt";
         cout << RED << "Running legalizer: " << cmd << RESET << endl;
         system(cmd.c_str());
+    }
+    else if (gArg.GetString("internalLegal", &legalizerPath))
+    {
+        cout << "Calling internal legalizer: " << endl;
+        cout << "Global HPWL: " << int(placedb->calcHPWL()) << endl;
+        AbacusLegalizer *legalizer = new AbacusLegalizer(placedb);
+        legalizer->legalization();
+        cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
+        placedb->outputBookShelf();
+        placedb->plotCurrentPlacement("Legalized result");
     }
 }

@@ -13,6 +13,7 @@ ADD_EXECUTABLE(
     ${PROJECT_SOURCE_DIR}/FFT/fftsg.cpp
     ${PROJECT_SOURCE_DIR}/Optimization/optimizer.cpp
     ${PROJECT_SOURCE_DIR}/EPlace/eplace.cpp
+    ${PROJECT_SOURCE_DIR}/Legalization/legalizer.cpp
 
 )
 INCLUDE_DIRECTORIES (
@@ -26,6 +27,7 @@ INCLUDE_DIRECTORIES (
     ${PROJECT_SOURCE_DIR}/FFT
     ${PROJECT_SOURCE_DIR}/EPlace
     ${PROJECT_SOURCE_DIR}/Optimization
+    ${PROJECT_SOURCE_DIR}/Legalization
     )
 
 target_link_libraries(ePlace "-lgomp -lpthread -lm -ldl -lX11")
