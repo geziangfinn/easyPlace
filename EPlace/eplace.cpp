@@ -99,8 +99,8 @@ void EPlacer_2D::fillerInitialization()
 
     float avg80TotalArea = 0;
     float avg80NodeArea = 0;
-    int minIdx = (int)(0.10 * (float)nodeCount); //! for calculating average area of the middle 80% of all nodes(cells and macros)
-    int maxIdx = (int)(0.90 * (float)nodeCount);
+    int minIdx = (int)(0.05 * (float)nodeCount); //! for calculating average area of the middle 80% of all nodes(cells and macros)
+    int maxIdx = (int)(0.95 * (float)nodeCount);
 
     for (int i = minIdx; i < maxIdx; i++)
     {

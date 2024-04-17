@@ -364,7 +364,7 @@ void Optimizer::CalcPreconditionedGradient()
     for (uint32_t idx = 0; idx < placer->ePlaceNodesAndFillers.size(); idx++)
     {
         // get connected net number
-        uint32_t connectedNetNum = placer->ePlaceNodesAndFillers[idx]->modulePins.size();
+        float connectedNetNum = placer->ePlaceNodesAndFillers[idx]->modulePins.size();
         // printf("Connected net num:%d, Pin count:%d\n",connectedNetNum,placer->ePlaceNodesAndFillers[idx]->modulePins.size());
         // assert(connectedNetNum == placer->ePlaceNodesAndFillers[idx]->modulePins.size());
         float charge = placer->ePlaceNodesAndFillers[idx]->getArea();
