@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
     }
     else if (gArg.GetString("internalLegal", &legalizerPath))
     {
+        // for std cell design only, since we don't have macro legalizer for now
         cout << "Calling internal legalizer: " << endl;
         cout << "Global HPWL: " << int(placedb->calcHPWL()) << endl;
         AbacusLegalizer *legalizer = new AbacusLegalizer(placedb);
