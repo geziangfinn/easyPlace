@@ -51,7 +51,7 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
 
 Module *PlaceDB::addTerminal(int index, string name, float width, float height, bool isFixed, bool isNI)
 {
-    assert(width != 0 && height != 0);
+    // assert(width != 0 && height != 0);
     Module *terminal = new Module(index, name, width, height, isFixed, isNI);
     assert(index < dbTerminals.size());
     dbTerminals[index] = terminal;

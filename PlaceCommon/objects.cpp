@@ -440,7 +440,7 @@ POS_2D Module::getUR_2D()
     ur_2D.x += width;
     ur_2D.y += height;
 
-    assert(width != 0 && height != 0);
+    // assert(width != 0 && height != 0);
     return ur_2D;
 }
 
