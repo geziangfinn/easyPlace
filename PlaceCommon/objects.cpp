@@ -420,6 +420,7 @@ void Pin::setDirection(int _direction)
 void Module::addPin(Pin *_pin)
 {
     modulePins.push_back(_pin);
+    nets.push_back(_pin->net);
 }
 
 POS_2D Module::getLL_2D()

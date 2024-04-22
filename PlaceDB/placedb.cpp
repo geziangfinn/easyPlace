@@ -160,7 +160,7 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     module->setCenter_2D(x, y);
 }
 
-POS_3D PlaceDB::getValidModuleCenter_2D(Module* module, float x, float y)
+POS_3D PlaceDB::getValidModuleCenter_2D(Module *module, float x, float y)
 {
     if (x - 0.5 * module->width < coreRegion.ll.x)
     {
@@ -215,6 +215,20 @@ void PlaceDB::setModuleLocation_2D_random(Module *module)
     setModuleLocation_2D(module, x, y);
 }
 
+void PlaceDB::moveModule_2D(Module *module, VECTOR_2D delta)
+{
+    POS_3D curPos = module->getCenter();
+    setModuleCenter_2D(module, curPos.x + delta.x, curPos.y + delta.y);
+}
+
+void PlaceDB::moveModule_2D(Module *module, VECTOR_2D_INT delta)
+{
+    VECTOR_2D_INT curPos;
+    curPos.x = module->getCenter().x;
+    curPos.y = module->getCenter().y;
+    setModuleCenter_2D(module, curPos.x + delta.x, curPos.y + delta.y);
+}
+
 void PlaceDB::randomPlacment()
 {
     for (Module *curModule : dbNodes)
@@ -259,6 +273,16 @@ double PlaceDB::calcNetBoundPins()
     for (Net *curNet : dbNets)
     {
         HPWL += curNet->calcBoundPin();
+    }
+    return HPWL;
+}
+
+double PlaceDB::calcModuleHPWL(Module *curModule)
+{
+    double HPWL = 0;
+    for (Pin *curPin : curModule->modulePins)
+    {
+        HPWL += curPin->net->calcNetHPWL();
     }
     return HPWL;
 }

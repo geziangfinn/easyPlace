@@ -59,6 +59,8 @@ public:
     void setModuleCenter_2D(Module *, float, float);
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
+    void moveModule_2D(Module*,VECTOR_2D);
+    void moveModule_2D(Module*,VECTOR_2D_INT);
     void randomPlacment();
 
     POS_3D getValidModuleCenter_2D(Module* module, float x, float y);
@@ -67,6 +69,7 @@ public:
     double calcWA_Wirelength_2D(VECTOR_2D);
     double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
+    double calcModuleHPWL(Module*);
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 
