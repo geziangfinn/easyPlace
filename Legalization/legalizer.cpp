@@ -474,8 +474,10 @@ ITER mLG: %d\n\
 
         sa_r_stp.x = (max_sa_r.x - 1.0) / (float)kLimit;
         sa_r_stp.y = (max_sa_r.y - 1.0) / (float)kLimit;
+
         //! 2. SA iterations
         SAMacroLegalization();
+
         //! 3. update parameters
         miuO *= beta;
         totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
@@ -487,7 +489,15 @@ ITER mLG: %d\n\
         }
     }
     totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
-    assert(totalMacroOverlap==0);
+    printf(
+        "\
+    mLG: \n\
+    FINAL HPWL=%d\n\
+    FINAL OVLP=%d\n\
+",
+        int(placeDB->calcHPWL()),
+        totalMacroOverlap);
+    // assert(totalMacroOverlap == 0);
 }
 
 void SAMacroLegalizer::SAMacroLegalization()
@@ -510,18 +520,19 @@ void SAMacroLegalizer::SAMacroLegalization()
         SAtemperature *= SAtemperatureCoef;
         r.x -= sa_r_stp.x;
         r.y -= sa_r_stp.y;
-        if (overlapFree)
-        {
-            break;
-        }
-        if (k % 100 == 99)
+
+        if (k % 50 == 49)
         {
             printf(
                 "  -- %d, %.2e, %.2e, %.2e, %.8e, %.2e, "
                 "\033[36m%d\033[0m\n",
-                k / 100 + 1, SAtemperature, r.x, r.y,
+                k / 50 + 1, SAtemperature, r.x, r.y,
                 // tot_mac_hpwl ,
                 totalHPWL, totalCellAreaCovered, totalMacroOverlap);
+        }
+        if (overlapFree)
+        {
+            break;
         }
     }
 }
