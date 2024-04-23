@@ -65,9 +65,9 @@ int main(int argc, char *argv[])
     QPPlacer *qpplacer = new QPPlacer(placedb);
     qpplacer->quadraticPlacement();
 
-    double initializationTime;
-    double iterationTime;
+    double mGPTime;
     double mLGTime;
+
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
 
     float targetDensity;
@@ -79,13 +79,17 @@ int main(int argc, char *argv[])
     eplacer->setTargetDensity(targetDensity);
     eplacer->initialization();
 
+    if(gArg.CheckExist("addNoise")){
+        placedb->addNoise((eplacer->binStep.x+eplacer->binStep.y) / 2 / 100);  // the noise range is [-avgbinStep,avgbinStep]
+    }
+
     Optimizer *opt = new Optimizer(eplacer, true);
 
-    time_start(&initializationTime);
+    time_start(&mGPTime);
     opt->DoNesterovOpt();
-    time_end(&initializationTime);
+    time_end(&mGPTime);
 
-    cout << "mGP time: " << initializationTime << endl;
+    cout << "mGP time: " << mGPTime << endl;
     placedb->plotCurrentPlacement("mGP result");
 
     ///////////////////////////////////////////////////
@@ -104,7 +108,7 @@ int main(int argc, char *argv[])
         // assert(a == b);
         // cout<<a<<" "<<b<<endl;
         macroLegalizer->setTargetDensity(targetDensity);
-
+        cout<<"Start mLG, total macro count: "<<placedb->dbMacroCount<<endl;
         time_start(&mLGTime);
         macroLegalizer->legalization();
         time_end(&mLGTime);

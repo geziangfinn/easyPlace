@@ -12,7 +12,7 @@
 #define MAX_ITERATION 3000
 #define BKTRK_EPS 0.95
 
-// p is the type of position , G is the type of gradient
+// P is the type of position , G is the type of gradient
 template <typename P, typename G>
 class NSIter
 {
@@ -31,7 +31,6 @@ public:
     Optimizer();
     Optimizer(EPlacer_2D *placer, bool verbose);
     void DoNesterovOpt();
-
 private:
     bool verbose;
     EPlacer_2D *placer;
@@ -44,6 +43,7 @@ private:
     void SetModulePosition_2D(const vector<POS_3D> &pos);
     void Init();
     void NesterovIter();
+    void NesterovIterBB();
     //    VECTOR_2D LipschitzConstantPrediction();
     bool StopCondition();
     void CalcPreconditionedGradient();
@@ -52,6 +52,7 @@ private:
     void PlacerStateInit();
     void PlacerStateUpdate();
     void PrintStatistics();
+
 };
 
 #endif
