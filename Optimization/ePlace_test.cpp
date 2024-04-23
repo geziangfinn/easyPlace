@@ -78,10 +78,20 @@ int main(int argc, char *argv[])
     eplacer->setTargetDensity(targetDensity);
     eplacer->initialization();
 
+    if(gArg.CheckExist("addNoise")){
+        placedb->addNoise((eplacer->binStep.x+eplacer->binStep.y) / 2 / 100);  // the noise range is [-avgbinStep,avgbinStep]
+    }
+
     Optimizer *opt = new Optimizer(eplacer, true);
 
     time_start(&initializationTime);
-    opt->DoNesterovOpt();
+
+    if(gArg.CheckExist("bb")){
+        opt->DoNesterovOpt(true);
+    }
+    else{
+        opt->DoNesterovOpt(false);
+    }
     time_end(&initializationTime);
 
     cout << "Optimization time: " << initializationTime << endl;

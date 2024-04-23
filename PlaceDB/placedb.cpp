@@ -1,3 +1,5 @@
+#include <random>
+
 #include "placedb.h"
 #include "global.h"
 
@@ -697,4 +699,15 @@ void PlaceDB::plotCurrentPlacement(string imageName)
     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
     img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
+}
+
+void PlaceDB::addNoise(float range){
+    static std::mt19937 gen(0); //0:random seed, fixed for debugging
+    static std::uniform_real_distribution<float> dis(-range,range);
+    for(auto node: dbNodes){
+        POS_3D pos = node->center;
+        pos.x += dis(gen);
+        pos.y += dis(gen);
+        node->setCenter_2D(pos.x,pos.y);
+    }
 }
