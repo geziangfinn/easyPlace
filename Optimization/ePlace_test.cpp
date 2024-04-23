@@ -65,6 +65,11 @@ int main(int argc, char *argv[])
     QPPlacer *qpplacer = new QPPlacer(placedb);
     qpplacer->quadraticPlacement();
 
+    if (gArg.CheckExist("addNoise"))
+    {
+        placedb->addNoise(); // the noise range is [-avgbinStep,avgbinStep]
+    }
+
     double mGPTime;
     double mLGTime;
 
@@ -78,10 +83,6 @@ int main(int argc, char *argv[])
 
     eplacer->setTargetDensity(targetDensity);
     eplacer->initialization();
-
-    if(gArg.CheckExist("addNoise")){
-        placedb->addNoise((eplacer->binStep.x+eplacer->binStep.y) / 2 / 100);  // the noise range is [-avgbinStep,avgbinStep]
-    }
 
     Optimizer *opt = new Optimizer(eplacer, true);
 

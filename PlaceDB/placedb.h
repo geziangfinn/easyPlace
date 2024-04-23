@@ -63,7 +63,7 @@ public:
     void moveModule_2D(Module*,VECTOR_2D);
     void moveModule_2D(Module*,VECTOR_2D_INT);
     void randomPlacment();
-    void addNoise(float);
+    void addNoise();
 
     POS_3D getValidModuleCenter_2D(Module* module, float x, float y);
 
