@@ -208,7 +208,6 @@ public:
     float beta;         // see ePlace-MS paper
 
     void legalization();
-    void SAMacroLegalization();
 
     void setTargetDensity(float _targetdensity)
     {
@@ -226,12 +225,14 @@ private:
     void initializeSAparams();
 
     int getAreaCoveredByMacros();
+    int getAreaCoveredByMacrosDebug();
     float getCellAreaCoveredByAllMacros();
 
     float getCellAreaCoveredByMacro(Module *);
     int getMacroOverlapArea(Module *);
     float getMacroCost(Module *, float &, float &, float &);
 
+    void SAMacroLegalization();
     void SAperturb();
     bool acceptPerturb(float, float);
 };

@@ -39,6 +39,7 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
     if (float_greater(height, commonRowHeight))
     {
         node->isMacro = true;
+        dbMacroCount++;
     }
     else if (float_greater(commonRowHeight, height))
     {

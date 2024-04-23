@@ -22,6 +22,7 @@ public:
     };
     int layerCount;  // how many layers? this is for 3dic
     int moduleCount; // number of modules
+    int dbMacroCount;
     int netCount;
     int pinCount;
     double commonRowHeight; //! rowHeight that all(most of the times) rows share

@@ -427,14 +427,22 @@ void SAMacroLegalizer::legalization()
     initialization();
     for (int j = 0; j < jLimit; j++) // outter loop(mLG iteration, see ePlace-MS paper)
     {
+        printf(
+            "\
+ITER mLG: %d\n\
+    HPWL=%f\n\
+    OVLP=%d\n\
+",
+            j + 1, totalHPWL,
+            totalMacroOverlap);
+
         //! 1. initialize parameters(t and r), this part of code is basically copied from RePlAce, macro.cpp
 
-        float sa_init_neg_rate =
-            0.03 * pow(beta, (float)j);
+        float sa_init_neg_rate = 0.03 * pow(beta, (float)j);
         // 3% cost increase will be
         // accepted in 50% probability
 
-        float sa_last_neg_rate = 0.0001 * pow((float)j, (float)j);
+        float sa_last_neg_rate = 0.0001 * pow(beta, (float)j);
         // 0.01% cost increase will be
         // accepted in 50% probability
 
@@ -462,24 +470,32 @@ void SAMacroLegalizer::legalization()
         r.x = max_sa_r.x;
         r.y = max_sa_r.y;
 
+        u.x = u.y = 1.0;
+
         sa_r_stp.x = (max_sa_r.x - 1.0) / (float)kLimit;
         sa_r_stp.y = (max_sa_r.y - 1.0) / (float)kLimit;
         //! 2. SA iterations
         SAMacroLegalization();
         //! 3. update parameters
         miuO *= beta;
+        totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
         // no update for miuD
-
+        placeDB->plotCurrentPlacement("mLG ite_ " + to_string(j + 1));
         if (overlapFree)
         {
             break;
         }
     }
+    totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
+    assert(totalMacroOverlap==0);
 }
 
 void SAMacroLegalizer::SAMacroLegalization()
 {
     int innerLoopCount = dbMacros.size();
+    printf(
+        "  -- ITER, TEMP, Rx, Ry, HPWL , DEN, OVLP\n");
+
     for (int k = 0; k < kLimit; k++) // inner loop(SA iteration), see ePlace-MS paper
     {
         for (int i = 0; i < innerLoopCount; i++) // there is one more for in RePlAce code, why???
@@ -497,6 +513,15 @@ void SAMacroLegalizer::SAMacroLegalization()
         if (overlapFree)
         {
             break;
+        }
+        if (k % 100 == 99)
+        {
+            printf(
+                "  -- %d, %.2e, %.2e, %.2e, %.8e, %.2e, "
+                "\033[36m%d\033[0m\n",
+                k / 100 + 1, SAtemperature, r.x, r.y,
+                // tot_mac_hpwl ,
+                totalHPWL, totalCellAreaCovered, totalMacroOverlap);
         }
     }
 }
@@ -819,6 +844,22 @@ int SAMacroLegalizer::getAreaCoveredByMacros()
         rectangles.push_back(llAndur);
     }
     return solution.rectangleArea(rectangles);
+}
+
+int SAMacroLegalizer::getAreaCoveredByMacrosDebug()
+{
+    int ovlp = 0;
+
+    for (int i = 0; i < dbMacros.size(); i++)
+    {
+        Module *mac1 = dbMacros[i];
+        for (int j = i + 1; j < dbMacros.size(); j++)
+        {
+            Module *mac2 = dbMacros[j];
+            ovlp += getOverlapArea_2D(mac2->getLL_2D(), mac2->getUR_2D(), mac1->getLL_2D(), mac1->getUR_2D());
+        }
+    }
+    return ovlp;
 }
 
 float SAMacroLegalizer::getCellAreaCoveredByAllMacros()

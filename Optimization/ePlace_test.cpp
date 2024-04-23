@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
 
     double initializationTime;
     double iterationTime;
+    double mLGTime;
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
 
     float targetDensity;
@@ -84,11 +85,35 @@ int main(int argc, char *argv[])
     opt->DoNesterovOpt();
     time_end(&initializationTime);
 
-    cout << "Optimization time: " << initializationTime << endl;
+    cout << "mGP time: " << initializationTime << endl;
+    placedb->plotCurrentPlacement("mGP result");
 
     ///////////////////////////////////////////////////
     // legalization and detailed placement
     ///////////////////////////////////////////////////
+
+    if (placedb->dbMacroCount > 0)
+    {
+        SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
+        // macroLegalizer->initializeMacros();
+        // cout << "cp1\n";
+        // int a = macroLegalizer->totalMacroArea - macroLegalizer->getAreaCoveredByMacros();
+        // cout << "cp2\n";
+        // int b = macroLegalizer->getAreaCoveredByMacrosDebug();
+        // cout << "cp3\n";
+        // assert(a == b);
+        // cout<<a<<" "<<b<<endl;
+        macroLegalizer->setTargetDensity(targetDensity);
+
+        time_start(&mLGTime);
+        macroLegalizer->legalization();
+        time_end(&mLGTime);
+
+        placedb->plotCurrentPlacement("mLG result");
+        cout << "HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
+        cout << "mLG time: " << mLGTime << endl;
+        exit(0);
+    }
 
     string legalizerPath;
 
@@ -117,6 +142,6 @@ int main(int argc, char *argv[])
         legalizer->legalization();
         cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
         placedb->outputBookShelf();
-        placedb->plotCurrentPlacement("Legalized result");
+        placedb->plotCurrentPlacement("Cell legalized result");
     }
 }
