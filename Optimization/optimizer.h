@@ -30,7 +30,7 @@ class Optimizer
 public:
     Optimizer();
     Optimizer(EPlacer_2D *placer, bool verbose);
-    void DoNesterovOpt(bool bb);
+    void DoNesterovOpt();
 private:
     bool verbose;
     EPlacer_2D *placer;

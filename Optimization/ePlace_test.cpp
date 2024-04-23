@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
     QPPlacer *qpplacer = new QPPlacer(placedb);
     qpplacer->quadraticPlacement();
 
-    double initializationTime;
-    double iterationTime;
+    double mGPTime;
+
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
 
     float targetDensity;
@@ -84,17 +84,11 @@ int main(int argc, char *argv[])
 
     Optimizer *opt = new Optimizer(eplacer, true);
 
-    time_start(&initializationTime);
+    time_start(&mGPTime);
+    opt->DoNesterovOpt();
+    time_end(&mGPTime);
 
-    if(gArg.CheckExist("bb")){
-        opt->DoNesterovOpt(true);
-    }
-    else{
-        opt->DoNesterovOpt(false);
-    }
-    time_end(&initializationTime);
-
-    cout << "Optimization time: " << initializationTime << endl;
+    cout << "mGP time: " << mGPTime << endl;
 
     ///////////////////////////////////////////////////
     // legalization and detailed placement

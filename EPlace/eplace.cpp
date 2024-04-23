@@ -653,7 +653,14 @@ void EPlacer_2D::plotCurrentPlacement(string imageName)
         int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
         int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
         int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-        img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+        if (curNode->isMacro)
+        {
+            img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
+        }
+        else
+        {
+            img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+        }
     }
 
     if (gArg.CheckExist("debug") && gArg.CheckExist("fullPlot"))

@@ -162,7 +162,7 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     module->setCenter_2D(x, y);
 }
 
-POS_3D PlaceDB::getValidModuleCenter_2D(Module* module, float x, float y)
+POS_3D PlaceDB::getValidModuleCenter_2D(Module *module, float x, float y)
 {
     if (x - 0.5 * module->width < coreRegion.ll.x)
     {
@@ -693,7 +693,14 @@ void PlaceDB::plotCurrentPlacement(string imageName)
         int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
         int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
         int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-        img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+        if (curNode->isMacro)
+        {
+            img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
+        }
+        else
+        {
+            img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+        }
     }
 
     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
@@ -701,13 +708,15 @@ void PlaceDB::plotCurrentPlacement(string imageName)
     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
 }
 
-void PlaceDB::addNoise(float range){
-    static std::mt19937 gen(0); //0:random seed, fixed for debugging
-    static std::uniform_real_distribution<float> dis(-range,range);
-    for(auto node: dbNodes){
+void PlaceDB::addNoise(float range)
+{
+    static std::mt19937 gen(0); // 0:random seed, fixed for debugging
+    static std::uniform_real_distribution<float> dis(-range, range);
+    for (auto node : dbNodes)
+    {
         POS_3D pos = node->center;
         pos.x += dis(gen);
         pos.y += dis(gen);
-        node->setCenter_2D(pos.x,pos.y);
+        node->setCenter_2D(pos.x, pos.y);
     }
 }
