@@ -708,15 +708,22 @@ void PlaceDB::plotCurrentPlacement(string imageName)
     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
 }
 
-void PlaceDB::addNoise(float range)
+void PlaceDB::addNoise()
 {
     static std::mt19937 gen(0); // 0:random seed, fixed for debugging
-    static std::uniform_real_distribution<float> dis(-range, range);
+
     for (auto node : dbNodes)
     {
+        VECTOR_2D range;
+        range.x = 0.5 * 0.025 * node->getWidth();
+        range.y = 0.5 * 0.025 * node->getHeight();
+
+        std::uniform_real_distribution<float> disx(-range.x, range.x);
+        std::uniform_real_distribution<float> disy(-range.y, range.y);
+        
         POS_3D pos = node->center;
-        pos.x += dis(gen);
-        pos.y += dis(gen);
+        pos.x += disx(gen);
+        pos.y += disy(gen);
         node->setCenter_2D(pos.x, pos.y);
     }
 }
