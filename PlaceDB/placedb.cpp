@@ -318,12 +318,12 @@ void PlaceDB::setChipRegion_2D()
 
 void PlaceDB::showDBInfo()
 {
-    float coreArea = coreRegion.getArea();
-    float cellArea = 0;
-    float macroArea = 0;
-    float fixedArea = 0;
-    float fixedAreaInCore = 0;
-    float movableArea = 0;
+    double coreArea = coreRegion.getArea();
+    double cellArea = 0;
+    double macroArea = 0;
+    double fixedArea = 0;
+    double fixedAreaInCore = 0;
+    double movableArea = 0;
     int macroCount = 0;
     int cellCount = 0;
     int terminalCount = dbTerminals.size();
@@ -745,7 +745,7 @@ void PlaceDB::addNoise()
 
         std::uniform_real_distribution<float> disx(-range.x, range.x);
         std::uniform_real_distribution<float> disy(-range.y, range.y);
-        
+
         POS_3D pos = node->center;
         pos.x += disx(gen);
         pos.y += disy(gen);

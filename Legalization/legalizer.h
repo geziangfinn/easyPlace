@@ -153,6 +153,7 @@ public:
         placeDB = NULL;
         dbMacros.clear();
         totalMacroArea = 0;
+        totalCellArea = 0;
         bins.clear();
         binDimension.SetZero();
         binStep.SetZero();
@@ -177,8 +178,8 @@ public:
     PlaceDB *placeDB;
     vector<Module *> dbMacros; // all std cells, sorted by x coordinate(non decreasing order)
 
-    int totalMacroArea;
-    int totalCellArea;
+    double totalMacroArea;// precision problem!!!! use int for total macro area causes bug
+    double totalCellArea;
 
     float targetDensity; // equals to eplacer target density if mGP was ran
 
@@ -187,8 +188,8 @@ public:
     VECTOR_2D binStep;          // length of a bin in X/Y direction
 
     // three things in the SA cost function!
-    float totalHPWL;
-    float totalCellAreaCovered;
+    double totalHPWL;
+    double totalCellAreaCovered;
     int totalMacroOverlap;
 
     bool overlapFree; // key stop condition of macro legalization
@@ -225,7 +226,7 @@ private:
     void initializeSAparams();
 
     int getAreaCoveredByMacros();
-    int getAreaCoveredByMacrosDebug();
+    double getMacrosOverlap();
     float getCellAreaCoveredByAllMacros();
 
     float getCellAreaCoveredByMacro(Module *);

@@ -425,15 +425,17 @@ void AbacusRow::collapse(int clusterIndex)
 void SAMacroLegalizer::legalization()
 {
     initialization();
-    for (int j = 0; j < jLimit; j++) // outter loop(mLG iteration, see ePlace-MS paper)
+
+    for (int j = 0; j < jLimit && !overlapFree; j++) // outter loop(mLG iteration, see ePlace-MS paper)
     {
         printf(
             "\
 ITER mLG: %d\n\
     HPWL=%f\n\
+    CELLCOVERED=%f\n\
     OVLP=%d\n\
 ",
-            j + 1, totalHPWL,
+            j + 1, totalHPWL, totalCellAreaCovered,
             totalMacroOverlap);
 
         //! 1. initialize parameters(t and r), this part of code is basically copied from RePlAce, macro.cpp
@@ -480,18 +482,21 @@ ITER mLG: %d\n\
 
         //! 3. update parameters
         miuO *= beta;
-        totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
         // no update for miuD
-        placeDB->plotCurrentPlacement("mLG ite_ " + to_string(j + 1));
-        if (overlapFree)
+        // cout << getMacrosOverlap() << " fff " << totalMacroArea - getAreaCoveredByMacros() << endl;
+        totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
+        if (totalMacroOverlap <= 0)
         {
-            break;
+            overlapFree = 1;
         }
+        placeDB->plotCurrentPlacement("mLG ite_" + to_string(j + 1));
     }
+
     totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
+    ;
     printf(
         "\
-    mLG: \n\
+    mLG done: \n\
     FINAL HPWL=%d\n\
     FINAL OVLP=%d\n\
 ",
@@ -503,36 +508,30 @@ ITER mLG: %d\n\
 void SAMacroLegalizer::SAMacroLegalization()
 {
     int innerLoopCount = dbMacros.size();
+    // cout << "innerloopcount(macro count): " << innerLoopCount << endl;
+    // cout << "kLimit: " << kLimit << endl;
     printf(
         "  -- ITER, TEMP, Rx, Ry, HPWL , DEN, OVLP\n");
 
-    for (int k = 0; k < kLimit; k++) // inner loop(SA iteration), see ePlace-MS paper
+    for (int k = 0; k < kLimit && !overlapFree; k++) // inner loop(SA iteration), see ePlace-MS paper
     {
-        for (int i = 0; i < innerLoopCount; i++) // there is one more for in RePlAce code, why???
+        for (int i = 0; i < innerLoopCount && !overlapFree; i++) // there is one more for in RePlAce code, why???
         {
             SAperturb();
-            if (overlapFree)
-            {
-                break;
-            }
         }
         // update temperature and r
         SAtemperature *= SAtemperatureCoef;
         r.x -= sa_r_stp.x;
         r.y -= sa_r_stp.y;
 
-        if (k % 50 == 49)
+        if (k % 100 == 99)
         {
             printf(
                 "  -- %d, %.2e, %.2e, %.2e, %.8e, %.2e, "
                 "\033[36m%d\033[0m\n",
-                k / 50 + 1, SAtemperature, r.x, r.y,
+                k / 100 + 1, SAtemperature, r.x, r.y,
                 // tot_mac_hpwl ,
                 totalHPWL, totalCellAreaCovered, totalMacroOverlap);
-        }
-        if (overlapFree)
-        {
-            break;
         }
     }
 }
@@ -547,14 +546,13 @@ void SAMacroLegalizer::initialization()
 
 void SAMacroLegalizer::initializeMacros()
 {
-
     for (Module *curNode : placeDB->dbNodes)
     {
         assert(curNode);
         if (curNode->isMacro)
         {
             dbMacros.push_back(curNode);
-            totalMacroArea += std::round(curNode->getArea()); // followed RePlAce code
+            totalMacroArea += curNode->getArea(); // followed RePlAce code
             //! Discretization of macro coordinates, followed RePlAce code
             POS_2D legalLL;
             legalLL.x = (int)(curNode->getLL_2D().x + 0.5); // set macro center to integer here, but why according to row height?
@@ -563,9 +561,10 @@ void SAMacroLegalizer::initializeMacros()
         }
         else
         {
-            totalCellArea += std::round(curNode->getArea());
+            totalCellArea += curNode->getArea();
         }
     }
+    cout << "total macro area: " << fixed << totalMacroArea << endl;
 }
 
 void SAMacroLegalizer::initializeBins()
@@ -825,6 +824,10 @@ void SAMacroLegalizer::initializeCost()
     totalCellAreaCovered = getCellAreaCoveredByAllMacros();
 
     totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros(); // SA legalization terminates when total macro overlap == 0;
+    if (totalMacroOverlap <= 0)
+    {
+        overlapFree = true;
+    }
 }
 
 void SAMacroLegalizer::initializeSAparams()
@@ -857,9 +860,9 @@ int SAMacroLegalizer::getAreaCoveredByMacros()
     return solution.rectangleArea(rectangles);
 }
 
-int SAMacroLegalizer::getAreaCoveredByMacrosDebug()
+double SAMacroLegalizer::getMacrosOverlap()
 {
-    int ovlp = 0;
+    double ovlp = 0;
 
     for (int i = 0; i < dbMacros.size(); i++)
     {
@@ -1008,6 +1011,7 @@ void SAMacroLegalizer::SAperturb()
         if (totalMacroOverlap <= 0 && newMacroOverlapCost <= 0 && curMacroOverlapCost > 0)
         {
             totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();
+            // totalMacroOverlap = getMacrosOverlap();
             if (totalMacroOverlap <= 0)
             {
                 overlapFree = true;
