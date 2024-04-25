@@ -420,6 +420,7 @@ void Pin::setDirection(int _direction)
 void Module::addPin(Pin *_pin)
 {
     modulePins.push_back(_pin);
+    nets.push_back(_pin->net);
 }
 
 POS_2D Module::getLL_2D()
@@ -440,7 +441,7 @@ POS_2D Module::getUR_2D()
     ur_2D.x += width;
     ur_2D.y += height;
 
-    assert(width != 0 && height != 0);
+    // assert(width != 0 && height != 0);
     return ur_2D;
 }
 

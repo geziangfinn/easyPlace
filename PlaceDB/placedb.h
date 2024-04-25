@@ -9,6 +9,7 @@ public:
     {
         layerCount = -1;
         moduleCount = -1;
+        dbMacroCount = 0;
         commonRowHeight = -1;
         dbNodes.clear();
         dbTerminals.clear();
@@ -22,6 +23,7 @@ public:
     };
     int layerCount;  // how many layers? this is for 3dic
     int moduleCount; // number of modules
+    int dbMacroCount;
     int netCount;
     int pinCount;
     double commonRowHeight; //! rowHeight that all(most of the times) rows share
@@ -57,16 +59,22 @@ public:
 
     void setModuleLocation_2D(Module *, float, float);
     void setModuleCenter_2D(Module *, float, float);
+    void setModuleCenter_2D(Module *, POS_3D);
+    void setModuleCenter_2D(Module *, VECTOR_3D);
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
+    void moveModule_2D(Module *, VECTOR_2D);
+    void moveModule_2D(Module *, VECTOR_2D_INT);
     void randomPlacment();
+    void addNoise();
 
-    POS_3D getValidModuleCenter_2D(Module* module, float x, float y);
+    POS_3D getValidModuleCenter_2D(Module *module, float x, float y);
 
     double calcHPWL();
     double calcWA_Wirelength_2D(VECTOR_2D);
     double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
+    double calcModuleHPWL(Module *);
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 

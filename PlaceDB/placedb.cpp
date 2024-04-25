@@ -1,3 +1,5 @@
+#include <random>
+
 #include "placedb.h"
 #include "global.h"
 
@@ -39,6 +41,7 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
     if (float_greater(height, commonRowHeight))
     {
         node->isMacro = true;
+        dbMacroCount++;
     }
     else if (float_greater(commonRowHeight, height))
     {
@@ -51,7 +54,7 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
 
 Module *PlaceDB::addTerminal(int index, string name, float width, float height, bool isFixed, bool isNI)
 {
-    assert(width != 0 && height != 0);
+    // assert(width != 0 && height != 0);
     Module *terminal = new Module(index, name, width, height, isFixed, isNI);
     assert(index < dbTerminals.size());
     dbTerminals[index] = terminal;
@@ -160,7 +163,17 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     module->setCenter_2D(x, y);
 }
 
-POS_3D PlaceDB::getValidModuleCenter_2D(Module* module, float x, float y)
+void PlaceDB::setModuleCenter_2D(Module *module, POS_3D pos)
+{
+    setModuleCenter_2D(module, pos.x, pos.y);
+}
+
+void PlaceDB::setModuleCenter_2D(Module *module, VECTOR_3D pos)
+{
+    setModuleCenter_2D(module, pos.x, pos.y);
+}
+
+POS_3D PlaceDB::getValidModuleCenter_2D(Module *module, float x, float y)
 {
     if (x - 0.5 * module->width < coreRegion.ll.x)
     {
@@ -215,6 +228,20 @@ void PlaceDB::setModuleLocation_2D_random(Module *module)
     setModuleLocation_2D(module, x, y);
 }
 
+void PlaceDB::moveModule_2D(Module *module, VECTOR_2D delta)
+{
+    POS_3D curPos = module->getCenter();
+    setModuleCenter_2D(module, curPos.x + delta.x, curPos.y + delta.y);
+}
+
+void PlaceDB::moveModule_2D(Module *module, VECTOR_2D_INT delta)
+{
+    VECTOR_2D_INT curPos;
+    curPos.x = module->getCenter().x;
+    curPos.y = module->getCenter().y;
+    setModuleCenter_2D(module, curPos.x + delta.x, curPos.y + delta.y);
+}
+
 void PlaceDB::randomPlacment()
 {
     for (Module *curModule : dbNodes)
@@ -263,6 +290,16 @@ double PlaceDB::calcNetBoundPins()
     return HPWL;
 }
 
+double PlaceDB::calcModuleHPWL(Module *curModule)
+{
+    double HPWL = 0;
+    for (Pin *curPin : curModule->modulePins)
+    {
+        HPWL += curPin->net->calcNetHPWL();
+    }
+    return HPWL;
+}
+
 void PlaceDB::moveNodesCenterToCenter()
 {
     POS_2D coreRegionCenter(0.5 * (coreRegion.ur.x + coreRegion.ll.x), 0.5 * (coreRegion.ur.y + coreRegion.ll.y));
@@ -291,12 +328,12 @@ void PlaceDB::setChipRegion_2D()
 
 void PlaceDB::showDBInfo()
 {
-    float coreArea = coreRegion.getArea();
-    float cellArea = 0;
-    float macroArea = 0;
-    float fixedArea = 0;
-    float fixedAreaInCore = 0;
-    float movableArea = 0;
+    double coreArea = coreRegion.getArea();
+    double cellArea = 0;
+    double macroArea = 0;
+    double fixedArea = 0;
+    double fixedAreaInCore = 0;
+    double movableArea = 0;
     int macroCount = 0;
     int cellCount = 0;
     int terminalCount = dbTerminals.size();
@@ -691,10 +728,37 @@ void PlaceDB::plotCurrentPlacement(string imageName)
         int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
         int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
         int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-        img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+        if (curNode->isMacro)
+        {
+            img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
+        }
+        else
+        {
+            img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+        }
     }
 
     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
     img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
+}
+
+void PlaceDB::addNoise()
+{
+    static std::mt19937 gen(0); // 0:random seed, fixed for debugging
+
+    for (auto node : dbNodes)
+    {
+        VECTOR_2D range;
+        range.x = 0.5 * 0.025 * node->getWidth();
+        range.y = 0.5 * 0.025 * node->getHeight();
+
+        std::uniform_real_distribution<float> disx(-range.x, range.x);
+        std::uniform_real_distribution<float> disy(-range.y, range.y);
+
+        POS_3D pos = node->center;
+        pos.x += disx(gen);
+        pos.y += disy(gen);
+        node->setCenter_2D(pos.x, pos.y);
+    }
 }

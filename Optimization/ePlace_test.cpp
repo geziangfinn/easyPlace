@@ -65,8 +65,14 @@ int main(int argc, char *argv[])
     QPPlacer *qpplacer = new QPPlacer(placedb);
     qpplacer->quadraticPlacement();
 
-    double initializationTime;
-    double iterationTime;
+    if (gArg.CheckExist("addNoise"))
+    {
+        placedb->addNoise(); // the noise range is [-avgbinStep,avgbinStep]
+    }
+
+    double mGPTime;
+    double mLGTime;
+
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
 
     float targetDensity;
@@ -80,15 +86,39 @@ int main(int argc, char *argv[])
 
     Optimizer *opt = new Optimizer(eplacer, true);
 
-    time_start(&initializationTime);
+    time_start(&mGPTime);
     opt->DoNesterovOpt();
-    time_end(&initializationTime);
+    time_end(&mGPTime);
 
-    cout << "Optimization time: " << initializationTime << endl;
+    cout << "mGP time: " << mGPTime << endl;
+    placedb->plotCurrentPlacement("mGP result");
 
     ///////////////////////////////////////////////////
     // legalization and detailed placement
     ///////////////////////////////////////////////////
+
+    if (placedb->dbMacroCount > 0)
+    {
+        SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
+        // macroLegalizer->initializeMacros();
+        // cout << "cp1\n";
+        // int a = macroLegalizer->totalMacroArea - macroLegalizer->getAreaCoveredByMacros();
+        // cout << "cp2\n";
+        // int b = macroLegalizer->getAreaCoveredByMacrosDebug();
+        // cout << "cp3\n";
+        // assert(a == b);
+        // cout<<a<<" "<<b<<endl;
+        macroLegalizer->setTargetDensity(targetDensity);
+        cout<<"Start mLG, total macro count: "<<placedb->dbMacroCount<<endl;
+        time_start(&mLGTime);
+        macroLegalizer->legalization();
+        time_end(&mLGTime);
+
+        placedb->plotCurrentPlacement("mLG result");
+        cout << "HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
+        cout << "mLG time: " << mLGTime << endl;
+        exit(0);
+    }
 
     string legalizerPath;
 
@@ -110,12 +140,13 @@ int main(int argc, char *argv[])
     }
     else if (gArg.GetString("internalLegal", &legalizerPath))
     {
+        // for std cell design only, since we don't have macro legalizer for now
         cout << "Calling internal legalizer: " << endl;
         cout << "Global HPWL: " << int(placedb->calcHPWL()) << endl;
         AbacusLegalizer *legalizer = new AbacusLegalizer(placedb);
         legalizer->legalization();
         cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
         placedb->outputBookShelf();
-        placedb->plotCurrentPlacement("Legalized result");
+        placedb->plotCurrentPlacement("Cell legalized result");
     }
 }
