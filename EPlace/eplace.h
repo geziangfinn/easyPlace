@@ -6,6 +6,20 @@
 #include "placedb.h"
 #include "fft.h"
 #include "plot.h"
+
+#define DELTA_HPWL_REF 350000
+#define PENALTY_MULTIPLIER_BASE 1.1
+#define PENALTY_MULTIPLIER_UPPERBOUND 1.05
+#define PENALTY_MULTIPLIER_LOWERBOUND 0.95
+
+enum PLACEMENT_STAGE
+{
+    mGP,
+    FILLERONLY,
+    cGP
+
+};
+
 class Bin_2D;
 class Bin_3D; // call it cube?
 class EPlacer_2D;
@@ -80,16 +94,24 @@ public:
 
     PlaceDB *db;
 
-    vector<Module *> ePlaceFillers;         // stores all filler cells. I think filler cells shouldn't be stored in placedb. is this unnecessary when we have ePlaceNodesAndFillers?
-    vector<Module *> ePlaceNodesAndFillers; //! contains nodes and fillers
+    vector<Module *> ePlaceFillers;         // for FILLERONLY placement stores all filler cells. I think filler cells shouldn't be stored in placedb. is this unnecessary when we have ePlaceNodesAndFillers?
+    vector<Module *> ePlaceNodesAndFillers; //! contains nodes and fillers, for mGP
+    vector<Module *> ePlaceCellsAndFillers; //! contains std cells and fillers, for cGP
 
-    vector<VECTOR_2D> wirelengthGradient; // store wirelength gradient for nodes only(wirelength gradient for filler is always 0)
-    vector<VECTOR_2D> densityGradient;    // store density gradient for fillers nodes (wirelength gradient for filler node is always 0)
-    vector<VECTOR_2D> totalGradient;      // total gradient of objective function f including gradients of all components
+    vector<VECTOR_3D> wirelengthGradient; // store wirelength gradient for nodes only(wirelength gradient for filler is always 0)
+    vector<VECTOR_3D> densityGradient;    // store density gradient for fillers nodes (wirelength gradient for filler node is always 0)
+    vector<VECTOR_3D> totalGradient;      // total gradient of objective function f including gradients of all components, for mGP
+    vector<VECTOR_3D> fillerGradient;
+    vector<VECTOR_3D> cGPGradient; // cell and fillers
 
     float targetDensity;         //!!!!!! so important
     float globalDensityOverflow; // !!!!! so important, tau
     VECTOR_2D invertedGamma;     // gamma of the wa wirelength model,here we actually use 1/gamma, following RePlAce. gamma is different for different dimension
+
+    float lambda; // penalty factor
+    double lastHPWL;
+
+    int placementStage;
 
     void init()
     {
@@ -100,6 +122,8 @@ public:
         targetDensity = 0;
         globalDensityOverflow = 0;
         invertedGamma.SetZero();
+        lambda = 0.0;
+        lastHPWL = 0.0;
 
         ePlaceStdCellArea = 0;
         ePlaceMacroArea = 0;
@@ -110,8 +134,11 @@ public:
 
         wirelengthGradient.clear();
         densityGradient.clear();
+
+        placementStage = mGP;
     }
     void setTargetDensity(float);
+    void setPlacementStage(int);
 
     void initialization();
 
@@ -119,15 +146,25 @@ public:
     void binInitialization();
     void gradientVectorInitialization();
 
-    void binNodeDensityUpdate(); //! only consider density from movable modules(nodes) in this function, because terminal density only needed to be calculated once, in binInitializaton()
-    void densityOverflowUpdate();
+    void binNodeDensityUpdate();  //! only consider density from movable modules(nodes) in this function, because terminal density only needed to be calculated once, in binInitializaton()
+    void densityOverflowUpdate(); // called in wirelenghGradientUpdate()
     void wirelengthGradientUpdate();
     void densityGradientUpdate();
-    void totalGradientUpdate(float);
+
+    void totalGradientUpdate();
+
+    vector<VECTOR_3D> getGradient();
+    vector<VECTOR_3D> getPosition();
+
+    void setPosition(vector<VECTOR_3D>);
 
     float penaltyFactorInitilization(); // initialize lambda 0, see ePlace paper equation 35
+    void updatePenaltyFactor();
     //! be aware of density scaling and local smooth in density calculation
 
     void plotCurrentPlacement(string);
+
+private:
+    vector<VECTOR_3D> getModulePositions(vector<Module *>);
 };
 #endif

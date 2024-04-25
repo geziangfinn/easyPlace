@@ -163,6 +163,16 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     module->setCenter_2D(x, y);
 }
 
+void PlaceDB::setModuleCenter_2D(Module *module, POS_3D pos)
+{
+    setModuleCenter_2D(module, pos.x, pos.y);
+}
+
+void PlaceDB::setModuleCenter_2D(Module *module, VECTOR_3D pos)
+{
+    setModuleCenter_2D(module, pos.x, pos.y);
+}
+
 POS_3D PlaceDB::getValidModuleCenter_2D(Module *module, float x, float y)
 {
     if (x - 0.5 * module->width < coreRegion.ll.x)

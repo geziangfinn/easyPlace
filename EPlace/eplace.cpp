@@ -6,6 +6,11 @@ void EPlacer_2D::setTargetDensity(float target)
     cout << padding << "Target density set at: " << targetDensity << padding << endl;
 }
 
+void EPlacer_2D::setPlacementStage(int stage)
+{
+    placementStage = stage;
+}
+
 void EPlacer_2D::initialization()
 {
     double binInitTime;
@@ -15,6 +20,8 @@ void EPlacer_2D::initialization()
     time_end(&binInitTime);
     cout << "Bin init time: " << binInitTime << endl;
     gradientVectorInitialization();
+    totalGradientUpdate(); // first update
+    penaltyFactorInitilization();
 }
 
 void EPlacer_2D::fillerInitialization()
@@ -136,6 +143,18 @@ void EPlacer_2D::fillerInitialization()
 
     ePlaceNodesAndFillers = db->dbNodes;
     ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end()); //! fillers are stored after nodes in the vector
+
+    for (Module *curCellOrFiller : ePlaceNodesAndFillers)
+    {
+        if (curCellOrFiller->isFiller)
+        {
+            ePlaceCellsAndFillers.push_back(curCellOrFiller);
+        }
+        else if (!curCellOrFiller->isMacro)
+        {
+            ePlaceCellsAndFillers.push_back(curCellOrFiller);
+        }
+    }
     // macro density scaling in density computation: RePlace bin.cpp line 1853
     // terminal(fixed macro) density scaling in density computation?: RePlace bin.cpp line 480
 
@@ -331,6 +350,9 @@ void EPlacer_2D::gradientVectorInitialization()
     wirelengthGradient.resize(db->dbNodes.size()); // fillers has no wirelength gradient
     densityGradient.resize(ePlaceNodesAndFillers.size());
     totalGradient.resize(ePlaceNodesAndFillers.size());
+
+    cGPGradient.resize(ePlaceCellsAndFillers.size());
+    fillerGradient.resize(ePlaceFillers.size());
 }
 
 void EPlacer_2D::densityOverflowUpdate()
@@ -544,11 +566,18 @@ void EPlacer_2D::densityGradientUpdate()
     }
 }
 
-void EPlacer_2D::totalGradientUpdate(float lambda)
+void EPlacer_2D::totalGradientUpdate()
 {
+
+    binNodeDensityUpdate();
+    densityGradientUpdate();
+    wirelengthGradientUpdate();
+
     segmentFaultCP("totalGradient");
     int index = 0;
-    for (Module *curNodeOrFiller : ePlaceNodesAndFillers)
+    int cGPindex = 0;
+    int fillerOnlyIndex = 0;
+    for (Module *curNodeOrFiller : ePlaceNodesAndFillers) // branch in this for can be eliminated
     {
         totalGradient[index].SetZero();
         assert(index == curNodeOrFiller->idx);
@@ -558,19 +587,92 @@ void EPlacer_2D::totalGradientUpdate(float lambda)
             // wirelength gradient of fillers should == 0
             totalGradient[index].x = lambda * densityGradient[index].x;
             totalGradient[index].y = lambda * densityGradient[index].y;
+
+            fillerGradient[fillerOnlyIndex] = totalGradient[index];
+            fillerOnlyIndex++;
+
+            cGPGradient[cGPindex] = totalGradient[index];
+            cGPindex++;
         }
         else
         {
             totalGradient[index].x = lambda * densityGradient[index].x - wirelengthGradient[index].x;
             totalGradient[index].y = lambda * densityGradient[index].y - wirelengthGradient[index].y;
+            if (!curNodeOrFiller->isMacro)
+            {
+                cGPGradient[cGPindex] = totalGradient[index];
+                cGPindex++;
+            }
         }
 
         index++;
     }
 }
 
+vector<VECTOR_3D> EPlacer_2D::getGradient()
+{
+    if (placementStage == mGP)
+    {
+        return totalGradient;
+    }
+    else if (placementStage == FILLERONLY)
+    {
+        return fillerGradient;
+    }
+    else if (placementStage == cGP)
+    {
+        return cGPGradient;
+    }
+}
+
+vector<VECTOR_3D> EPlacer_2D::getPosition()
+{
+    if (placementStage == mGP)
+    {
+        return getModulePositions(ePlaceNodesAndFillers);
+    }
+    else if (placementStage == FILLERONLY)
+    {
+        return getModulePositions(ePlaceFillers);
+    }
+    else if (placementStage == cGP)
+    {
+        return getModulePositions(ePlaceCellsAndFillers);
+    }
+}
+
+void EPlacer_2D::setPosition(vector<VECTOR_3D> modulePositions)
+{
+    int moduleCount;
+    if (placementStage == mGP)
+    {
+        moduleCount = ePlaceNodesAndFillers.size();
+        for (int i = 0; i < moduleCount; i++)
+        {
+            db->setModuleCenter_2D(ePlaceNodesAndFillers[i], modulePositions[i]);
+        }
+    }
+    else if (placementStage == FILLERONLY)
+    {
+        moduleCount = ePlaceFillers.size();
+        for (int i = 0; i < moduleCount; i++)
+        {
+            db->setModuleCenter_2D(ePlaceFillers[i], modulePositions[i]);
+        }
+    }
+    else if (placementStage == cGP)
+    {
+        moduleCount = ePlaceCellsAndFillers.size();
+        for (int i = 0; i < moduleCount; i++)
+        {
+            db->setModuleCenter_2D(ePlaceCellsAndFillers[i], modulePositions[i]);
+        }
+    }
+}
+
 float EPlacer_2D::penaltyFactorInitilization()
 {
+    lastHPWL = db->calcHPWL();
     float denominator = 0;
     float numerator = 0;
 
@@ -594,6 +696,30 @@ float EPlacer_2D::penaltyFactorInitilization()
 
     lambda0 = float_div(numerator, denominator);
     return lambda0;
+}
+
+void EPlacer_2D::updatePenaltyFactor()
+{
+    float curHPWL = db->calcHPWL();
+    float multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(curHPWL - lastHPWL) / DELTA_HPWL_REF + 1.0)); // see ePlace-3D code opt.cpp line 1523
+    if (float_greater(multiplier, PENALTY_MULTIPLIER_UPPERBOUND))
+    {
+        multiplier = PENALTY_MULTIPLIER_UPPERBOUND;
+    }
+    if (float_less(multiplier, PENALTY_MULTIPLIER_LOWERBOUND))
+    {
+        multiplier = PENALTY_MULTIPLIER_LOWERBOUND;
+    }
+    lambda *= multiplier;
+    // if (penaltyFactor < 0.00001)
+    // {
+    //     penaltyFactor = 0.00001;
+    // }
+    // else if (penaltyFactor > 10.0)
+    // {
+    //     penaltyFactor = 10.0;
+    // }
+    lastHPWL = curHPWL;
 }
 
 void EPlacer_2D::plotCurrentPlacement(string imageName)
@@ -679,6 +805,18 @@ void EPlacer_2D::plotCurrentPlacement(string imageName)
     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
     img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
+}
+
+vector<VECTOR_3D> EPlacer_2D::getModulePositions(vector<Module *> modules)
+{
+    int moduleCount = modules.size();
+    vector<VECTOR_3D> res;
+    res.resize(moduleCount);
+
+    for (int i = 0; i < modules.size(); i++)
+    {
+        res[i] = modules[i]->getCenter();
+    }
 }
 
 void EPlacer_2D::binNodeDensityUpdate()

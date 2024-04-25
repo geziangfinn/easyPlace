@@ -59,6 +59,8 @@ public:
 
     void setModuleLocation_2D(Module *, float, float);
     void setModuleCenter_2D(Module *, float, float);
+    void setModuleCenter_2D(Module *, POS_3D);
+    void setModuleCenter_2D(Module *, VECTOR_3D);
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
     void moveModule_2D(Module *, VECTOR_2D);

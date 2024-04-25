@@ -109,11 +109,11 @@ struct POS_2D // POS means postition, POS_2D can be used to store coordinates, o
         return os;
     }
 };
-struct POS_3D
+struct POS_3D:public VECTOR_3D
 {
-    float x;
-    float y;
-    float z;
+    // float x;
+    // float y;
+    // float z;
     POS_3D() { SetZero(); };
     POS_3D(float _x, float _y, float _z)
     {
@@ -448,5 +448,10 @@ inline double getOverlapArea_2D(POS_2D ll1, POS_2D ur1, POS_2D ll2, POS_2D ur2)
     rect2.ur = ur2;
 
     return getOverlapArea_2D(rect1, rect2);
+}
+
+inline float L2NORM(VECTOR_3D a)
+{
+    return sqrt(float_square(a.x) + float_square(a.y) + float_square(a.z));
 }
 #endif
