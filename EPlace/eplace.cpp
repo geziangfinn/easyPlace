@@ -581,12 +581,21 @@ void EPlacer_2D::totalGradientUpdate()
     {
         totalGradient[index].SetZero();
         assert(index == curNodeOrFiller->idx);
+
+        // precondition
+        float connectedNetNum = curNodeOrFiller->modulePins.size();
+        // printf("Connected net num:%d, Pin count:%d\n",connectedNetNum,placer->ePlaceNodesAndFillers[idx]->modulePins.size());
+        // assert(connectedNetNum == placer->ePlaceNodesAndFillers[idx]->modulePins.size());
+        float charge = curNodeOrFiller->getArea();
+        float preconditioner = 1 / max(1.0f, (connectedNetNum + lambda * charge));
+        // preconditionedGradient[idx].x = preconditioner * placer->totalGradient[idx].x;
+        // preconditionedGradient[idx].y = preconditioner * placer->totalGradient[idx].y;
         // calculate -gradient here
         if (curNodeOrFiller->isFiller)
         {
             // wirelength gradient of fillers should == 0
-            totalGradient[index].x = lambda * densityGradient[index].x;
-            totalGradient[index].y = lambda * densityGradient[index].y;
+            totalGradient[index].x = preconditioner * lambda * densityGradient[index].x;
+            totalGradient[index].y = preconditioner * lambda * densityGradient[index].y;
 
             fillerGradient[fillerOnlyIndex] = totalGradient[index];
             fillerOnlyIndex++;
@@ -596,8 +605,8 @@ void EPlacer_2D::totalGradientUpdate()
         }
         else
         {
-            totalGradient[index].x = lambda * densityGradient[index].x - wirelengthGradient[index].x;
-            totalGradient[index].y = lambda * densityGradient[index].y - wirelengthGradient[index].y;
+            totalGradient[index].x = preconditioner * (lambda * densityGradient[index].x - wirelengthGradient[index].x);
+            totalGradient[index].y = preconditioner * (lambda * densityGradient[index].y - wirelengthGradient[index].y);
             if (!curNodeOrFiller->isMacro)
             {
                 cGPGradient[cGPindex] = totalGradient[index];
