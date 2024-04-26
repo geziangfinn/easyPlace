@@ -109,28 +109,7 @@ struct POS_2D // POS means postition, POS_2D can be used to store coordinates, o
         return os;
     }
 };
-struct POS_3D:public VECTOR_3D
-{
-    // float x;
-    // float y;
-    // float z;
-    POS_3D() { SetZero(); };
-    POS_3D(float _x, float _y, float _z)
-    {
-        x = _x;
-        y = _y;
-        z = _z;
-    }
-    inline void SetZero()
-    {
-        x = y = z = 0.0; //!! 0.0!!!!
-    }
-    friend inline std::ostream &operator<<(std::ostream &os, const POS_3D &pos)
-    {
-        os << "(" << pos.x << "," << pos.y << "," << pos.z << ")";
-        return os;
-    }
-};
+
 struct VECTOR_2D
 {
     float x;
@@ -185,6 +164,58 @@ struct VECTOR_3D
     friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_3D &vec)
     {
         os << "[" << vec.x << "," << vec.y << "," << vec.z << "]"; // [] for vectors and () for pos
+        return os;
+    }
+    inline VECTOR_3D operator+(const VECTOR_3D &rhs)
+    {
+        VECTOR_3D v;
+        v.x = this->x + rhs.x;
+        v.y = this->y + rhs.y;
+        v.z = this->z + rhs.z;
+        return v;
+    }
+    inline VECTOR_3D operator-(const VECTOR_3D &rhs) const
+    {
+        VECTOR_3D v;
+        v.x = this->x - rhs.x;
+        v.y = this->y - rhs.y;
+        v.z = this->z - rhs.z;
+        return v;
+    }
+    inline VECTOR_3D operator*(float c)
+    {
+        VECTOR_3D v;
+        v.x = this->x * c;
+        v.y = this->y * c;
+        v.z = this->z * c;
+        return v;
+    }
+    inline float operator*(const VECTOR_3D &rhs) const
+    {
+        return  (this->x * rhs.x + this->y * rhs.y + this->z * rhs.z);
+    }
+
+};
+
+struct POS_3D : public VECTOR_3D
+{
+    // float x;
+    // float y;
+    // float z;
+    POS_3D() { SetZero(); };
+    POS_3D(float _x, float _y, float _z)
+    {
+        x = _x;
+        y = _y;
+        z = _z;
+    }
+    inline void SetZero()
+    {
+        x = y = z = 0.0; //!! 0.0!!!!
+    }
+    friend inline std::ostream &operator<<(std::ostream &os, const POS_3D &pos)
+    {
+        os << "(" << pos.x << "," << pos.y << "," << pos.z << ")";
         return os;
     }
 };

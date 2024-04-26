@@ -57,8 +57,8 @@ void Optimizer::PlacerStateInit()
     placer->binNodeDensityUpdate();
     placer->densityGradientUpdate();
     placer->wirelengthGradientUpdate();
-    penaltyFactor = placer->penaltyFactorInitilization();
-    placer->totalGradientUpdate(penaltyFactor);
+    // penaltyFactor = placer->penaltyFactorInitilization();
+    // placer->totalGradientUpdate(penaltyFactor);
 }
 
 void Optimizer::PlacerStateUpdate()
@@ -159,7 +159,7 @@ void Optimizer::NesterovIter()
     {
         while (true)
         {
-            placer->totalGradientUpdate(penaltyFactor);
+            // placer->totalGradientUpdate(penaltyFactor);
             CalcPreconditionedGradient();
             newNSIter.gradient = preconditionedGradient;
             float newLipschitzConstant = CalcLipschitzConstant_2D(newNSIter.referenceSolution, curNSIter.referenceSolution, newNSIter.gradient, curNSIter.gradient);
@@ -194,7 +194,7 @@ void Optimizer::NesterovIter()
 
     // update this iteration
     UpdatePenaltyFactor();
-    placer->totalGradientUpdate(penaltyFactor);
+    // placer->totalGradientUpdate(penaltyFactor);
     CalcPreconditionedGradient();
     newNSIter.gradient = preconditionedGradient;
     lastNSIter = curNSIter;
@@ -269,7 +269,7 @@ void Optimizer::NesterovIterBB()
     SetModulePosition_2D(newNSIter.referenceSolution);
     PlacerStateUpdate();
     UpdatePenaltyFactor();
-    placer->totalGradientUpdate(penaltyFactor);
+    // placer->totalGradientUpdate(penaltyFactor);
     CalcPreconditionedGradient();
     newNSIter.gradient = preconditionedGradient;
     lastNSIter = curNSIter;

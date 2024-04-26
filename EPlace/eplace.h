@@ -158,7 +158,7 @@ public:
 
     void setPosition(vector<VECTOR_3D>);
 
-    float penaltyFactorInitilization(); // initialize lambda 0, see ePlace paper equation 35
+    void penaltyFactorInitilization(); // initialize lambda 0, see ePlace paper equation 35
     void updatePenaltyFactor();
     //! be aware of density scaling and local smooth in density calculation
 

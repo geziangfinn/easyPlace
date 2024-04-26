@@ -11,7 +11,8 @@ ADD_EXECUTABLE(
     ${PROJECT_SOURCE_DIR}/FFT/fft.cpp
     ${PROJECT_SOURCE_DIR}/FFT/fftsg2d.cpp
     ${PROJECT_SOURCE_DIR}/FFT/fftsg.cpp
-    ${PROJECT_SOURCE_DIR}/Optimization/optimizer.cpp
+    ${PROJECT_SOURCE_DIR}/Optimization/nesterov.hpp
+    ${PROJECT_SOURCE_DIR}/Optimization/opt.hpp
     ${PROJECT_SOURCE_DIR}/EPlace/eplace.cpp
     ${PROJECT_SOURCE_DIR}/Legalization/legalizer.cpp
 

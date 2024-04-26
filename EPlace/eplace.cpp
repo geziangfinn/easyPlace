@@ -679,7 +679,7 @@ void EPlacer_2D::setPosition(vector<VECTOR_3D> modulePositions)
     }
 }
 
-float EPlacer_2D::penaltyFactorInitilization()
+void EPlacer_2D::penaltyFactorInitilization()
 {
     lastHPWL = db->calcHPWL();
     float denominator = 0;
@@ -687,8 +687,6 @@ float EPlacer_2D::penaltyFactorInitilization()
 
     int nodeCount = wirelengthGradient.size();
     int nodeAndFillerCount = densityGradient.size();
-
-    float lambda0 = 0;
 
     for (int i = 0; i < nodeCount; i++)
     {
@@ -703,12 +701,12 @@ float EPlacer_2D::penaltyFactorInitilization()
         denominator += fabs(densityGradient[i].y);
     }
 
-    lambda0 = float_div(numerator, denominator);
-    return lambda0;
+    lambda = float_div(numerator, denominator);
 }
 
 void EPlacer_2D::updatePenaltyFactor()
 {
+    printf("penalty factor = %.10f\n",lambda);
     float curHPWL = db->calcHPWL();
     float multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(curHPWL - lastHPWL) / DELTA_HPWL_REF + 1.0)); // see ePlace-3D code opt.cpp line 1523
     if (float_greater(multiplier, PENALTY_MULTIPLIER_UPPERBOUND))
@@ -826,6 +824,7 @@ vector<VECTOR_3D> EPlacer_2D::getModulePositions(vector<Module *> modules)
     {
         res[i] = modules[i]->getCenter();
     }
+    return res;
 }
 
 void EPlacer_2D::binNodeDensityUpdate()

@@ -2,7 +2,8 @@
 #include "arghandler.h"
 #include "qplace.h"
 #include "eplace.h"
-#include "optimizer.h"
+#include "opt.hpp"
+#include "nesterov.hpp"
 #include "legalizer.h"
 #include <iostream>
 using namespace std;
@@ -84,10 +85,10 @@ int main(int argc, char *argv[])
     eplacer->setTargetDensity(targetDensity);
     eplacer->initialization();
 
-    Optimizer *opt = new Optimizer(eplacer, true);
+    FirstOrderOptimizer<VECTOR_3D> *opt = new EplaceNesterovOpt<VECTOR_3D>(eplacer);
 
     time_start(&mGPTime);
-    opt->DoNesterovOpt();
+    opt->opt();
     time_end(&mGPTime);
 
     cout << "mGP time: " << mGPTime << endl;
@@ -103,7 +104,7 @@ int main(int argc, char *argv[])
         // macroLegalizer->initializeMacros();
         // cout << "cp1\n";
         // int a = macroLegalizer->totalMacroArea - macroLegalizer->getAreaCoveredByMacros();
-        // cout << "cp2\n";
+        // cout << "cp2\n";s
         // int b = macroLegalizer->getAreaCoveredByMacrosDebug();
         // cout << "cp3\n";
         // assert(a == b);
