@@ -112,6 +112,7 @@ public:
     double lastHPWL;
 
     int placementStage;
+    int mGPIterationCount;
 
     void init()
     {
@@ -136,6 +137,8 @@ public:
         densityGradient.clear();
 
         placementStage = mGP;
+        mGPIterationCount=0;
+        
     }
     void setTargetDensity(float);
     void setPlacementStage(int);
@@ -162,6 +165,11 @@ public:
     void updatePenaltyFactor();
     //! be aware of density scaling and local smooth in density calculation
 
+    void switch2FillerOnly();
+    void switch2cGP();
+
+    void showInfo();
+    void showInfoFinal();
     void plotCurrentPlacement(string);
 
 private:

@@ -73,6 +73,8 @@ int main(int argc, char *argv[])
 
     double mGPTime;
     double mLGTime;
+    double FILLERONLYtime;
+    double cGPTime;
 
     EPlacer_2D *eplacer = new EPlacer_2D(placedb);
 
@@ -91,6 +93,8 @@ int main(int argc, char *argv[])
     opt->opt();
     time_end(&mGPTime);
 
+    cout << "mGP finished!\n";
+    cout << "Final HPWL: " << int(placedb->calcHPWL()) << endl;
     cout << "mGP time: " << mGPTime << endl;
     placedb->plotCurrentPlacement("mGP result");
 
@@ -98,7 +102,7 @@ int main(int argc, char *argv[])
     // legalization and detailed placement
     ///////////////////////////////////////////////////
 
-    if (placedb->dbMacroCount > 0)
+    if (placedb->dbMacroCount > 0&&!gArg.CheckExist("nomLG"))
     {
         SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
         // macroLegalizer->initializeMacros();
@@ -110,7 +114,7 @@ int main(int argc, char *argv[])
         // assert(a == b);
         // cout<<a<<" "<<b<<endl;
         macroLegalizer->setTargetDensity(targetDensity);
-        cout<<"Start mLG, total macro count: "<<placedb->dbMacroCount<<endl;
+        cout << "Start mLG, total macro count: " << placedb->dbMacroCount << endl;
         time_start(&mLGTime);
         macroLegalizer->legalization();
         time_end(&mLGTime);
@@ -118,7 +122,28 @@ int main(int argc, char *argv[])
         placedb->plotCurrentPlacement("mLG result");
         cout << "HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
         cout << "mLG time: " << mLGTime << endl;
-        exit(0);
+        // exit(0);
+
+        eplacer->switch2FillerOnly();
+
+        time_start(&FILLERONLYtime);
+        opt->opt();
+        time_end(&FILLERONLYtime);
+
+        cout << "filler placement finished!\n";
+        cout << "FILLERONLY time: " << mGPTime << endl;
+        placedb->plotCurrentPlacement("FILLERONLY result");
+
+        eplacer->switch2cGP();
+
+        time_start(&cGPTime);
+        opt->opt();
+        time_end(&cGPTime);
+
+        cout << "cGP finished!\n";
+        cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
+        cout << "cGP time: " << mGPTime << endl;
+        placedb->plotCurrentPlacement("cGP result");
     }
 
     string legalizerPath;

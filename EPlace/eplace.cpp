@@ -706,7 +706,7 @@ void EPlacer_2D::penaltyFactorInitilization()
 
 void EPlacer_2D::updatePenaltyFactor()
 {
-    printf("penalty factor = %.10f\n",lambda);
+    // printf("penalty factor = %.10f\n", lambda);
     float curHPWL = db->calcHPWL();
     float multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(curHPWL - lastHPWL) / DELTA_HPWL_REF + 1.0)); // see ePlace-3D code opt.cpp line 1523
     if (float_greater(multiplier, PENALTY_MULTIPLIER_UPPERBOUND))
@@ -727,6 +727,31 @@ void EPlacer_2D::updatePenaltyFactor()
     //     penaltyFactor = 10.0;
     // }
     lastHPWL = curHPWL;
+}
+
+void EPlacer_2D::switch2FillerOnly()
+{
+    for (Module *curFiller : ePlaceFillers)
+    {
+        db->setModuleLocation_2D_random(curFiller);
+    }
+    placementStage = FILLERONLY;
+}
+
+void EPlacer_2D::switch2cGP()
+{
+    //! 1. update lambda
+    lambda = lambda * pow(1.1, mGPIterationCount * 0.1);
+    //! 2. update placement stage
+    placementStage = cGP;
+}
+
+void EPlacer_2D::showInfo()
+{
+    cout << "Overflow: " << globalDensityOverflow << endl;
+    cout << "penalty factor: " << fixed << lambda << endl;
+    cout << "HPWL: " << lastHPWL << endl
+         << endl;
 }
 
 void EPlacer_2D::plotCurrentPlacement(string imageName)
@@ -796,7 +821,7 @@ void EPlacer_2D::plotCurrentPlacement(string imageName)
         }
     }
 
-    if (gArg.CheckExist("debug") && gArg.CheckExist("fullPlot"))
+    if ((gArg.CheckExist("debug") || placementStage == FILLERONLY))
     {
         for (Module *curNode : ePlaceFillers)
         {

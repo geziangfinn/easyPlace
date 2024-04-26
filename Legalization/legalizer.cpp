@@ -489,7 +489,10 @@ ITER mLG: %d\n\
         {
             overlapFree = 1;
         }
-        placeDB->plotCurrentPlacement("mLG ite_" + to_string(j + 1));
+        if (gArg.CheckExist("fullPlot"))
+        {
+            placeDB->plotCurrentPlacement("mLG ite_" + to_string(j + 1));
+        }
     }
 
     totalMacroOverlap = totalMacroArea - getAreaCoveredByMacros();

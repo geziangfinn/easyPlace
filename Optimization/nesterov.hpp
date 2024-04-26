@@ -14,7 +14,8 @@
 #define BKTRK_EPS 0.95
 
 template <typename T>
-class NSIter{
+class NSIter
+{
 public:
     void resize(size_t length);
     std::vector<T> main_solution;
@@ -23,61 +24,143 @@ public:
 };
 
 template <typename T>
-void NSIter<T>::resize(size_t length){
+void NSIter<T>::resize(size_t length)
+{
     main_solution.resize(length);
     reference_solution.resize(length);
     gradient.resize(length);
 }
 
 template <typename T>
-class EplaceNesterovOpt: public FirstOrderOptimizer<T>{
+class EplaceNesterovOpt : public FirstOrderOptimizer<T>
+{
 public:
-    EplaceNesterovOpt(EPlacer_2D* placer):placer(placer){};
+    EplaceNesterovOpt(EPlacer_2D *placer) : placer(placer){};
     // void opt();
 private:
     bool stop_condition();
     void opt_step();
     void init();
+    void wrap_up();
     void opt_step_bb();
     void opt_step_bktrk();
     void opt_step_vanilla();
-    EPlacer_2D* placer;
+    EPlacer_2D *placer;
     NSIter<T> cur_iter, last_iter;
     size_t iter_count;
-    float NS_opt_param; //ak
+    float NS_opt_param; // ak
 };
 
 template <typename T>
-bool EplaceNesterovOpt<T>::stop_condition(){
+bool EplaceNesterovOpt<T>::stop_condition()
+{
     float targetOverflow;
     if (gArg.CheckExist("targetOverflow"))
     {
         gArg.GetFloat("targetOverflow", &targetOverflow);
     }
-    else{
+    else
+    {
         targetOverflow = 0.1f;
     }
-    return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
+
+    float cGPtargetOverflow = 0.07f;
+
+    bool judge;
+    switch (placer->placementStage)
+    {
+    case mGP:
+        judge = (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
+        if (judge)
+        {
+            placer->mGPIterationCount = iter_count;
+        }
+        // return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
+        return judge;
+        break;
+    case FILLERONLY:
+        return iter_count >= 20;
+        break;
+    case cGP:
+        return (placer->globalDensityOverflow < cGPtargetOverflow) || (iter_count > MAX_ITERATION);
+        break;
+    default:
+        cerr << "INCORRECT PLACEMENT STAGE!\n";
+        exit(0);
+    }
+
+    // if (placer->placementStage == mGP)
+    // {
+    //     bool judge = (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
+    //     if (judge)
+    //     {
+    //         placer->mGPIterationCount = iter_count;
+    //     }
+    //     // return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
+    //     return judge;
+    // }
+    // else if (placer->placementStage == FILLERONLY)
+    // {
+    //     return iter_count >= 20;
+    // }
+    // else if (placer->placementStage == cGP)
+    // {
+    //     return (placer->globalDensityOverflow < cGPtargetOverflow) || (iter_count > MAX_ITERATION);
+    // }
+    // else
+    // {
+    //     cerr << "INCORRECT PLACEMENT STAGE!\n";
+    //     exit(0);
+    // }
+
+    // return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
 }
 
 template <typename T>
-void EplaceNesterovOpt<T>::opt_step(){
-    printf("Iter %d\n",iter_count);
-    if(iter_count%10==0)
-    {
-        placer->db->plotCurrentPlacement("Iter-"+to_string(iter_count));
-    }
+void EplaceNesterovOpt<T>::opt_step()
+{
+    printf("Iter %d\n", iter_count);
 
-    if(gArg.CheckExist("bb")){
+    if (gArg.CheckExist("bb"))
+    {
         opt_step_bb();
     }
-    else if (gArg.CheckExist("bktrk")){
+    else if (gArg.CheckExist("bktrk"))
+    {
         opt_step_bktrk();
     }
-    else{
+    else
+    {
         opt_step_vanilla();
     }
     placer->updatePenaltyFactor();
+    placer->showInfo();
+
+    switch (placer->placementStage)
+    {
+    case mGP:
+        if (iter_count % 10 == 0 && gArg.CheckExist("fullPlot"))
+        {
+            placer->plotCurrentPlacement("mGP Iter-" + to_string(iter_count));
+        }
+        break;
+    case FILLERONLY:
+        if (gArg.CheckExist("fullPlot"))
+        {
+            placer->plotCurrentPlacement("FILLERONLY Iter-" + to_string(iter_count));
+        }
+        break;
+    case cGP:
+        if (gArg.CheckExist("fullPlot"))
+        {
+            placer->plotCurrentPlacement("cGP Iter-" + to_string(iter_count));
+        }
+        break;
+    default:
+        cerr << "INCORRECT PLACEMENT STAGE!\n";
+        exit(0);
+    }
+
     iter_count++;
 }
 
@@ -86,19 +169,26 @@ void EplaceNesterovOpt<T>::opt_step(){
 //     iter_count = 0;
 // }
 
-template <>
-void EplaceNesterovOpt<VECTOR_3D>::init(){
+template <typename T>
+void EplaceNesterovOpt<T>::init()
+{
     iter_count = 0;
     NS_opt_param = 1;
     cur_iter.main_solution = placer->getPosition();
-    printf("main length %d\n",cur_iter.main_solution.size());
+    printf("main length %d\n", cur_iter.main_solution.size());
 }
 
+template <typename T>
+void EplaceNesterovOpt<T>::wrap_up()
+{
+    placer->setPosition(cur_iter.main_solution);
+}
 
 template <>
-void EplaceNesterovOpt<VECTOR_3D>::opt_step_bb(){
+void EplaceNesterovOpt<VECTOR_3D>::opt_step_bb()
+{
     cur_iter.reference_solution = placer->getPosition();
-    placer->totalGradientUpdate();//?
+    placer->totalGradientUpdate(); //?
     cur_iter.gradient = placer->getGradient();
     float step_size;
     NSIter<VECTOR_3D> new_iter;
@@ -110,7 +200,7 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bb(){
     }
     else
     {
-        float lipschitz_constant = calc_lipschitz_constant(cur_iter.reference_solution,last_iter.reference_solution,cur_iter.gradient,last_iter.gradient);
+        float lipschitz_constant = calc_lipschitz_constant(cur_iter.reference_solution, last_iter.reference_solution, cur_iter.gradient, last_iter.gradient);
         float lip_step = 1 / lipschitz_constant;
         Eigen::VectorXf s(3 * length);
         Eigen::VectorXf y(3 * length);
@@ -137,9 +227,9 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bb(){
         {
             step_size = min(s_norm / y_norm, lip_step);
         }
-        printf("lip=%f,bb_short=%f,bb_long=%f\n",lip_step,bb_short_step,bb_long_step);
+        printf("lip=%f,bb_short=%f,bb_long=%f\n", lip_step, bb_short_step, bb_long_step);
     }
-    printf("stepSize : %f\n\n", step_size);
+    printf("stepSize : %f\n", step_size);
 
     float new_NS_opt_param = (1 + sqrt(4 * float_square(NS_opt_param) + 1)) / 2; // ak+1
 
@@ -162,15 +252,16 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bb(){
 }
 
 template <>
-void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk(){
+void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk()
+{
     cur_iter.reference_solution = placer->getPosition();
-    placer->totalGradientUpdate();//?
+    placer->totalGradientUpdate(); //?
     cur_iter.gradient = placer->getGradient();
     float step_size;
     NSIter<VECTOR_3D> new_iter;
     size_t length = cur_iter.main_solution.size();
     new_iter.resize(length);
-    
+
     // initial step size
     if (iter_count == 0)
     {
@@ -178,16 +269,17 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk(){
     }
     else
     {
-        float lipschitz_constant = calc_lipschitz_constant(cur_iter.reference_solution,last_iter.reference_solution,cur_iter.gradient,last_iter.gradient);
+        float lipschitz_constant = calc_lipschitz_constant(cur_iter.reference_solution, last_iter.reference_solution, cur_iter.gradient, last_iter.gradient);
         step_size = 1 / lipschitz_constant;
     }
-    
-    printf("stepSize : %f\n\n", step_size);
+
+    printf("stepSize : %f\n", step_size);
 
     float new_NS_opt_param = (1 + sqrt(4 * float_square(NS_opt_param) + 1)) / 2; // ak+1
 
-    while(true){
-        // first move cells 
+    while (true)
+    {
+        // first move cells
         for (size_t idx = 0; idx < length; idx++)
         {
             VECTOR_3D &new_position = new_iter.main_solution[idx];
@@ -202,9 +294,10 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk(){
         placer->setPosition(new_iter.reference_solution);
         placer->totalGradientUpdate();
         new_iter.gradient = placer->getGradient();
-        float new_lipschitz_constant = calc_lipschitz_constant(new_iter.reference_solution,cur_iter.reference_solution,new_iter.gradient,cur_iter.gradient);
+        float new_lipschitz_constant = calc_lipschitz_constant(new_iter.reference_solution, cur_iter.reference_solution, new_iter.gradient, cur_iter.gradient);
         float new_step_size = 1 / new_lipschitz_constant;
-        if (BKTRK_EPS * step_size <= new_step_size){
+        if (BKTRK_EPS * step_size <= new_step_size)
+        {
             break;
         }
         printf("bktrk!\n");
@@ -217,9 +310,10 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk(){
 }
 
 template <>
-void EplaceNesterovOpt<VECTOR_3D>::opt_step_vanilla(){
+void EplaceNesterovOpt<VECTOR_3D>::opt_step_vanilla()
+{
     cur_iter.reference_solution = placer->getPosition();
-    placer->totalGradientUpdate();//?
+    placer->totalGradientUpdate(); //?
     cur_iter.gradient = placer->getGradient();
     float step_size;
     NSIter<VECTOR_3D> new_iter;
@@ -231,10 +325,10 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_vanilla(){
     }
     else
     {
-        float lipschitz_constant = calc_lipschitz_constant(cur_iter.reference_solution,last_iter.reference_solution,cur_iter.gradient,last_iter.gradient);
+        float lipschitz_constant = calc_lipschitz_constant(cur_iter.reference_solution, last_iter.reference_solution, cur_iter.gradient, last_iter.gradient);
         step_size = 1 / lipschitz_constant;
     }
-    printf("stepSize : %f\n\n", step_size);
+    printf("stepSize : %f\n", step_size);
 
     float new_NS_opt_param = (1 + sqrt(4 * float_square(NS_opt_param) + 1)) / 2; // ak+1
 

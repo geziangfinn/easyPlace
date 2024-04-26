@@ -11,6 +11,7 @@ public:
     void opt();
 private:
     virtual void init()=0;
+    virtual void wrap_up()=0;
     virtual void opt_step()=0;
     virtual bool stop_condition()=0;
 };
@@ -21,6 +22,7 @@ void FirstOrderOptimizer<T>::opt(){
     while(!stop_condition()){
         opt_step();
     }
+    wrap_up();
 }
 
 #endif
