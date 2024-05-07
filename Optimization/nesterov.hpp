@@ -196,7 +196,8 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bb()
     new_iter.resize(length);
     if (iter_count == 0)
     {
-        step_size = 0.01;
+        // step_size = 0.01;
+        step_size = 1;
     }
     else
     {
@@ -265,7 +266,8 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk()
     // initial step size
     if (iter_count == 0)
     {
-        step_size = 0.01;
+        // step_size = 0.01;
+        step_size = 1;
     }
     else
     {
@@ -321,7 +323,8 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_vanilla()
     new_iter.resize(length);
     if (iter_count == 0)
     {
-        step_size = 0.01;
+        // step_size = 0.01;
+        step_size = 1;
     }
     else
     {
