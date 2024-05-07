@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     // legalization and detailed placement
     ///////////////////////////////////////////////////
 
-    if (placedb->dbMacroCount > 0&&!gArg.CheckExist("nomLG"))
+    if (placedb->dbMacroCount > 0 && !gArg.CheckExist("nomLG"))
     {
         SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
         // macroLegalizer->initializeMacros();
@@ -124,26 +124,29 @@ int main(int argc, char *argv[])
         cout << "mLG time: " << mLGTime << endl;
         // exit(0);
 
-        eplacer->switch2FillerOnly();
+        if (!gArg.CheckExist("nocGP"))
+        {
+            eplacer->switch2FillerOnly();
 
-        time_start(&FILLERONLYtime);
-        opt->opt();
-        time_end(&FILLERONLYtime);
+            time_start(&FILLERONLYtime);
+            opt->opt();
+            time_end(&FILLERONLYtime);
 
-        cout << "filler placement finished!\n";
-        cout << "FILLERONLY time: " << mGPTime << endl;
-        placedb->plotCurrentPlacement("FILLERONLY result");
+            cout << "filler placement finished!\n";
+            cout << "FILLERONLY time: " << mGPTime << endl;
+            placedb->plotCurrentPlacement("FILLERONLY result");
 
-        eplacer->switch2cGP();
+            eplacer->switch2cGP();
 
-        time_start(&cGPTime);
-        opt->opt();
-        time_end(&cGPTime);
+            time_start(&cGPTime);
+            opt->opt();
+            time_end(&cGPTime);
 
-        cout << "cGP finished!\n";
-        cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
-        cout << "cGP time: " << mGPTime << endl;
-        placedb->plotCurrentPlacement("cGP result");
+            cout << "cGP finished!\n";
+            cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
+            cout << "cGP time: " << mGPTime << endl;
+            placedb->plotCurrentPlacement("cGP result");
+        }
     }
 
     string legalizerPath;
