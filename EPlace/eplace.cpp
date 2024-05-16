@@ -741,7 +741,7 @@ void EPlacer_2D::switch2FillerOnly()
 void EPlacer_2D::switch2cGP()
 {
     //! 1. update lambda
-    lambda = lambda * pow(1.1, mGPIterationCount * 0.1);
+    lambda = lambda / pow(1.1, mGPIterationCount * 0.1);
     //! 2. update placement stage
     placementStage = cGP;
 }

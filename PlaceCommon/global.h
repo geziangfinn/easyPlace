@@ -21,6 +21,8 @@ const string padding(30, '=');
 #define EPS 1.0E-15 // for float number comparison
 #define DOUBLE_MAX __DBL_MAX__
 #define DOUBLE_MIN __DBL_MIN__ //!!!!! double min > 0!!!
+#define FLOAT_MAX __FLT_MAX__
+#define FLOAT_MIN __FLT_MIN__ //!!!!! double min > 0!!!
 #define INT_CONVERT(a) (int)(1.0 * (a) + 0.5f)
 #define INT_DOWN(a) (int)(a)
 #define NEGATIVE_MAX_EXP -300

@@ -515,9 +515,10 @@ void SAMacroLegalizer::SAMacroLegalization()
     // cout << "kLimit: " << kLimit << endl;
     printf(
         "  -- ITER, TEMP, Rx, Ry, HPWL , DEN, OVLP\n");
-
+    double ite100time;
     for (int k = 0; k < kLimit && !overlapFree; k++) // inner loop(SA iteration), see ePlace-MS paper
     {
+        time_start(&ite100time);
         for (int i = 0; i < innerLoopCount && !overlapFree; i++) // there is one more for in RePlAce code, why???
         {
             SAperturb();
@@ -529,12 +530,14 @@ void SAMacroLegalizer::SAMacroLegalization()
 
         if (k % 100 == 99)
         {
+            time_end(&ite100time);
             printf(
                 "  -- %d, %.2e, %.2e, %.2e, %.8e, %.2e, "
                 "\033[36m%d\033[0m\n",
                 k / 100 + 1, SAtemperature, r.x, r.y,
                 // tot_mac_hpwl ,
                 totalHPWL, totalCellAreaCovered, totalMacroOverlap);
+            cout<<"ite100time: "<<ite100time<<endl;
         }
     }
 }
@@ -822,7 +825,7 @@ void SAMacroLegalizer::initializeBins()
 
 void SAMacroLegalizer::initializeCost()
 {
-    totalHPWL = placeDB->calcHPWL();
+    totalHPWL = placeDB->calcHPWL(); // all pin absolute position initialized here!
 
     totalCellAreaCovered = getCellAreaCoveredByAllMacros();
 
@@ -997,6 +1000,13 @@ void SAMacroLegalizer::SAperturb()
     float curCost = getMacroCost(chosenOne, curHPWLCost, curCellCoveredCost, curMacroOverlapCost);
 
     placeDB->moveModule_2D(chosenOne, delta);
+    for (Pin *curModulePin : chosenOne->modulePins)
+    {
+        // curModulePin->getAbsolutePos();
+        curModulePin->absolutePos.x = curModulePin->module->getCenter().x + curModulePin->offset.x;
+        curModulePin->absolutePos.y = curModulePin->module->getCenter().y + curModulePin->offset.y;
+        curModulePin->absolutePos.z = curModulePin->module->getCenter().z;
+    }
 
     float newHPWLCost;
     float newCellCoveredCost;
@@ -1024,6 +1034,13 @@ void SAMacroLegalizer::SAperturb()
     else
     {
         placeDB->setModuleCenter_2D(chosenOne, curCenter.x, curCenter.y);
+        for (Pin *curModulePin : chosenOne->modulePins)
+        {
+            // curModulePin->getAbsolutePos();
+            curModulePin->absolutePos.x = curModulePin->module->getCenter().x + curModulePin->offset.x;
+            curModulePin->absolutePos.y = curModulePin->module->getCenter().y + curModulePin->offset.y;
+            curModulePin->absolutePos.z = curModulePin->module->getCenter().z;
+        }
     }
 }
 

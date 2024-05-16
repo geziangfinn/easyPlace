@@ -17,30 +17,26 @@ void Net::allocateMemoryForPin(int n)
 
 double Net::calcNetHPWL()
 {
-    double maxX = -DOUBLE_MAX;
-    double minX = DOUBLE_MAX;
+    float maxX = -FLOAT_MAX;
+    float minX = FLOAT_MAX;
     // double maxY = DOUBLE_MIN;
-    double maxY = -DOUBLE_MAX;
-    double minY = DOUBLE_MAX;
+    float maxY = -FLOAT_MAX;
+    float minY = FLOAT_MAX;
     // double maxZ = DOUBLE_MIN;
-    double maxZ = -DOUBLE_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
-    double minZ = DOUBLE_MAX;
+    float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+    float minZ = FLOAT_MAX;
 
-    double curX;
-    double curY;
-    double curZ;
+    POS_3D curPos;
     double HPWL;
     for (Pin *curPin : netPins)
     {
-        curX = curPin->getAbsolutePos().x;
-        curY = curPin->getAbsolutePos().y;
-        curZ = curPin->getAbsolutePos().z;
-        minX = min(minX, curX);
-        maxX = max(maxX, curX);
-        minY = min(minY, curY);
-        maxY = max(maxY, curY);
-        minZ = min(minZ, curZ);
-        maxZ = max(maxZ, curZ);
+        curPos = curPin->getAbsolutePos();
+        minX = min(minX, curPos.x);
+        maxX = max(maxX, curPos.x);
+        minY = min(minY, curPos.y);
+        maxY = max(maxY, curPos.y);
+        minZ = min(minZ, curPos.z);
+        maxZ = max(maxZ, curPos.z);
     }
     if (!gArg.CheckExist("3DIC"))
     {
@@ -54,61 +50,56 @@ double Net::calcNetHPWL()
 
 double Net::calcBoundPin()
 {
-    // double maxX = DOUBLE_MIN;
-    double maxX = -DOUBLE_MAX;
-    double minX = DOUBLE_MAX;
+    float maxX = -FLOAT_MAX;
+    float minX = FLOAT_MAX;
     // double maxY = DOUBLE_MIN;
-    double maxY = -DOUBLE_MAX;
-    double minY = DOUBLE_MAX;
+    float maxY = -FLOAT_MAX;
+    float minY = FLOAT_MAX;
     // double maxZ = DOUBLE_MIN;
-    double maxZ = -DOUBLE_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
-    double minZ = DOUBLE_MAX;
+    float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+    float minZ = FLOAT_MAX;
 
-    double curX;
-    double curY;
-    double curZ;
+    POS_3D curPos;
     double HPWL;
 
     for (Pin *curPin : netPins)
     {
-        curX = curPin->getAbsolutePos().x;
-        curY = curPin->getAbsolutePos().y;
-        curZ = curPin->getAbsolutePos().z;
-        //!!!!! assume curX curY curZ always >= 0!!!
-        assert(curZ == 0);
-        if (curX < minX)
+        curPos= curPin->getAbsolutePos();
+        //!!!!! assume cusPos.x/y/z always >= 0!!!
+        assert(curPos.z == 0);
+        if (curPos.x < minX)
         {
-            minX = curX;
+            minX = curPos.x;
             boundPinXmin = curPin;
         }
 
-        if (curX > maxX)
+        if (curPos.x > maxX)
         {
-            maxX = curX;
+            maxX = curPos.x;
             boundPinXmax = curPin;
         }
 
-        if (curY < minY)
+        if (curPos.y < minY)
         {
-            minY = curY;
+            minY = curPos.y;
             boundPinYmin = curPin;
         }
 
-        if (curY > maxY)
+        if (curPos.y > maxY)
         {
-            maxY = curY;
+            maxY = curPos.y;
             boundPinYmax = curPin;
         }
 
-        if (curZ < minZ)
+        if (curPos.z < minZ)
         {
-            minZ = curZ;
+            minZ = curPos.z;
             boundPinZmin = curPin;
         }
 
-        if (curZ > maxZ)
+        if (curPos.z > maxZ)
         {
-            maxZ = curZ;
+            maxZ = curPos.z;
             boundPinZmax = curPin;
         }
     }
@@ -152,13 +143,13 @@ double Net::calcWirelengthLSE_2D(VECTOR_2D invertedGamma)
     for (Pin *curPin : netPins)
     {
         POS_3D pinPosition = curPin->getAbsolutePos();
-        VECTOR_2D expMax;                                       
-        VECTOR_2D expMin;                                       
-        expMax.x = (pinPosition.x - pinMaxX) * invertedGamma.x; 
-        expMin.x = (pinMinX - pinPosition.x) * invertedGamma.x; 
+        VECTOR_2D expMax;
+        VECTOR_2D expMin;
+        expMax.x = (pinPosition.x - pinMaxX) * invertedGamma.x;
+        expMin.x = (pinMinX - pinPosition.x) * invertedGamma.x;
         expMax.y = (pinPosition.y - pinMaxY) * invertedGamma.y;
         expMin.y = (pinMinY - pinPosition.y) * invertedGamma.y;
-        
+
         if (expMax.x > NEGATIVE_MAX_EXP)
         {
             curPin->eMax_LSE.x = fastExp(expMax.x);
@@ -209,9 +200,8 @@ double Net::calcWirelengthLSE_2D(VECTOR_2D invertedGamma)
     sumMin_LSE.x = sumMin.x;
     sumMin_LSE.y = sumMin.y;
 
-    return (pinMaxX-pinMinX+log(sumMax.x)/invertedGamma.x+log(sumMin.x)/invertedGamma.x)+
-           (pinMaxY-pinMinY+log(sumMax.y)/invertedGamma.y+log(sumMin.y)/invertedGamma.y);
-
+    return (pinMaxX - pinMinX + log(sumMax.x) / invertedGamma.x + log(sumMin.x) / invertedGamma.x) +
+           (pinMaxY - pinMinY + log(sumMax.y) / invertedGamma.y + log(sumMin.y) / invertedGamma.y);
 }
 
 double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
@@ -374,13 +364,13 @@ VECTOR_2D Net::getWirelengthGradientWA_2D(VECTOR_2D invertedGamma, Pin *curPin)
 VECTOR_2D Net::getWirelengthGradientLSE_2D(VECTOR_2D invertedGamma, Pin *curPin)
 {
     VECTOR_2D gradientOnCurrentPin = VECTOR_2D();
-    VECTOR_2D gradientMax = VECTOR_2D();            // the gradient added by positive term
-    VECTOR_2D gradientMin = VECTOR_2D();            // the gradient added by negative term
+    VECTOR_2D gradientMax = VECTOR_2D(); // the gradient added by positive term
+    VECTOR_2D gradientMin = VECTOR_2D(); // the gradient added by negative term
 
-    gradientMax.x = (curPin->expZeroFlgMax_LSE.x ? 0 : curPin->eMax_LSE.x ) / sumMax_LSE.x;
-    gradientMin.x = (curPin->expZeroFlgMin_LSE.x ? 0 : curPin->eMin_LSE.x ) / sumMin_LSE.x;
-    gradientMax.y = (curPin->expZeroFlgMax_LSE.y ? 0 : curPin->eMax_LSE.y ) / sumMax_LSE.y;
-    gradientMin.y = (curPin->expZeroFlgMin_LSE.y ? 0 : curPin->eMin_LSE.y ) / sumMin_LSE.y;
+    gradientMax.x = (curPin->expZeroFlgMax_LSE.x ? 0 : curPin->eMax_LSE.x) / sumMax_LSE.x;
+    gradientMin.x = (curPin->expZeroFlgMin_LSE.x ? 0 : curPin->eMin_LSE.x) / sumMin_LSE.x;
+    gradientMax.y = (curPin->expZeroFlgMax_LSE.y ? 0 : curPin->eMax_LSE.y) / sumMax_LSE.y;
+    gradientMin.y = (curPin->expZeroFlgMin_LSE.y ? 0 : curPin->eMin_LSE.y) / sumMin_LSE.y;
 
     gradientOnCurrentPin.x = gradientMax.x - gradientMin.x;
     gradientOnCurrentPin.y = gradientMax.y - gradientMin.y;
@@ -389,12 +379,17 @@ VECTOR_2D Net::getWirelengthGradientLSE_2D(VECTOR_2D invertedGamma, Pin *curPin)
 
 POS_3D Pin::getAbsolutePos()
 {
-    POS_3D absPos;
+    // POS_3D absPos;
     // module->calcCenter();//?
-    absPos.x = module->getCenter().x + offset.x;
-    absPos.y = module->getCenter().y + offset.y;
-    absPos.z = module->getCenter().z;
-    return absPos;
+    absolutePos.x = module->getCenter().x + offset.x;
+    absolutePos.y = module->getCenter().y + offset.y;
+    absolutePos.z = module->getCenter().z;
+    return absolutePos;
+}
+
+POS_3D Pin::fetchAbsolutePos()
+{
+    return absolutePos;
 }
 
 void Pin::setId(int index)

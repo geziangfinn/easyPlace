@@ -88,6 +88,7 @@ public:
         module = NULL;
         net = NULL;
         offset.SetZero();
+        absolutePos.SetZero();
         direction = -1;
         eMin_WA.SetZero();
         eMax_WA.SetZero();
@@ -98,8 +99,10 @@ public:
     Module *module;
     Net *net;
     POS_2D offset;
+    POS_3D absolutePos;
     int direction; // 0 output  1 input  -1 not-define
     POS_3D getAbsolutePos();
+    POS_3D fetchAbsolutePos();// currently for mLG only
 
     VECTOR_3D eMin_WA;               // e^[(Xmin-Xi)/gamma] in WA model (X/Y/Z)
     VECTOR_3D eMax_WA;               // e^[(Xi-Xmax)/gamma] in WA model (X/Y/Z)

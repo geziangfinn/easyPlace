@@ -44,12 +44,12 @@ int main(int argc, char *argv[])
             cout << "    Benchmark: " << benchmarkName << endl;
 
             string plotPath;
-            if (!gArg.GetString("plotPath", &plotPath))
+            if (!gArg.GetString("outputPath", &plotPath))
             {
                 plotPath = "./";
             }
 
-            plotPath += "/" + benchmarkName + "/";
+            plotPath += "/" + benchmarkName + "/Graphs/";
 
             string cmd = "rm -rf " + plotPath;
             system(cmd.c_str());
@@ -64,7 +64,10 @@ int main(int argc, char *argv[])
     }
     placedb->showDBInfo();
     QPPlacer *qpplacer = new QPPlacer(placedb);
-    qpplacer->quadraticPlacement();
+    if (!gArg.CheckExist("noQP"))
+    {
+        qpplacer->quadraticPlacement();
+    }
 
     if (gArg.CheckExist("addNoise"))
     {
@@ -89,9 +92,12 @@ int main(int argc, char *argv[])
 
     FirstOrderOptimizer<VECTOR_3D> *opt = new EplaceNesterovOpt<VECTOR_3D>(eplacer);
 
-    time_start(&mGPTime);
-    opt->opt();
-    time_end(&mGPTime);
+    if (!gArg.CheckExist("nomGP"))
+    {
+        time_start(&mGPTime);
+        opt->opt();
+        time_end(&mGPTime);
+    }
 
     cout << "mGP finished!\n";
     cout << "Final HPWL: " << int(placedb->calcHPWL()) << endl;
@@ -105,14 +111,6 @@ int main(int argc, char *argv[])
     if (placedb->dbMacroCount > 0 && !gArg.CheckExist("nomLG"))
     {
         SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
-        // macroLegalizer->initializeMacros();
-        // cout << "cp1\n";
-        // int a = macroLegalizer->totalMacroArea - macroLegalizer->getAreaCoveredByMacros();
-        // cout << "cp2\n";s
-        // int b = macroLegalizer->getAreaCoveredByMacrosDebug();
-        // cout << "cp3\n";
-        // assert(a == b);
-        // cout<<a<<" "<<b<<endl;
         macroLegalizer->setTargetDensity(targetDensity);
         cout << "Start mLG, total macro count: " << placedb->dbMacroCount << endl;
         time_start(&mLGTime);
@@ -148,12 +146,18 @@ int main(int argc, char *argv[])
             placedb->plotCurrentPlacement("cGP result");
         }
     }
+    
+    cout << "Output bookshelf:\n";
+    placedb->outputBookShelf();
+
+    if (gArg.CheckExist("noLegal"))
+    {
+        return;
+    }
 
     string legalizerPath;
-
     if (gArg.GetString("legalizerPath", &legalizerPath))
     {
-        placedb->outputBookShelf();
         string outputAUXPath;
         string outputPLPath;
         string outputPath;

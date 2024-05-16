@@ -293,9 +293,38 @@ double PlaceDB::calcNetBoundPins()
 double PlaceDB::calcModuleHPWL(Module *curModule)
 {
     double HPWL = 0;
-    for (Pin *curPin : curModule->modulePins)
+    for (Pin *curModulePin : curModule->modulePins)
     {
-        HPWL += curPin->net->calcNetHPWL();
+        // HPWL += curModulePin->net->calcNetHPWL();
+        float maxX = -FLOAT_MAX;
+        float minX = FLOAT_MAX;
+        // double maxY = DOUBLE_MIN;
+        float maxY = -FLOAT_MAX;
+        float minY = FLOAT_MAX;
+        // double maxZ = DOUBLE_MIN;
+        float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+        float minZ = FLOAT_MAX;
+
+        POS_3D curPos;
+
+        for (Pin *curPin : curModulePin->net->netPins)
+        {
+            curPos = curPin->absolutePos;//!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
+            // curPos = curPin->fetchAbsolutePos();
+            minX = min(minX, curPos.x);
+            maxX = max(maxX, curPos.x);
+            minY = min(minY, curPos.y);
+            maxY = max(maxY, curPos.y);
+            minZ = min(minZ, curPos.z);
+            maxZ = max(maxZ, curPos.z);
+        }
+        // if (!gArg.CheckExist("3DIC"))
+        // {
+        //     //? assert(maxZ == minZ == 0); this causes bug
+        //     assert(float_equal(maxZ, 0.0));
+        //     assert(float_equal(minZ, 0.0));
+        // }
+        HPWL += ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
     }
     return HPWL;
 }
