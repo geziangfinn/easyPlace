@@ -34,4 +34,4 @@ sample command:
 * [RePlAce](https://ieeexplore.ieee.org/document/8418790)
 
 # Authors
-Ziang Ge and Yikai Liu, supervised by Prof. Pingqiang Zhou.
+Ziang Ge and Yikai Liu, supervised by Prof. [Pingqiang Zhou](https://faculty.sist.shanghaitech.edu.cn/faculty/zhoupq/home.html) at [ShanghaiTech University](https://www.shanghaitech.edu.cn/)
