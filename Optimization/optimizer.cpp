@@ -1,6 +1,5 @@
-#include "optimizer.h"
 #include "Eigen/Dense"
-
+#include "optimizer.h"
 #include <cmath>
 #include <assert.h>
 #include <cstdio>

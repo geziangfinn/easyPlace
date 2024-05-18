@@ -1,6 +1,6 @@
+#include "qplace.h"
 #include "parser.h"
 #include "arghandler.h"
-#include "qplace.h"
 #include "eplace.h"
 #include "opt.hpp"
 #include "nesterov.hpp"

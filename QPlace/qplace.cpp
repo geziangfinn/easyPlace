@@ -1,8 +1,4 @@
 #include "qplace.h"
-#include <Eigen/Core>
-#include <Eigen/SparseCore>
-#include <Eigen/IterativeLinearSolvers>
-#include <unsupported/Eigen/IterativeSolvers>
 using namespace Eigen;
 void QPPlacer::quadraticPlacement()
 {

@@ -17,26 +17,32 @@ void Net::allocateMemoryForPin(int n)
 
 double Net::calcNetHPWL()
 {
-    float maxX = -FLOAT_MAX;
-    float minX = FLOAT_MAX;
+    double maxX = -DOUBLE_MAX;
+    double minX = DOUBLE_MAX;
     // double maxY = DOUBLE_MIN;
-    float maxY = -FLOAT_MAX;
-    float minY = FLOAT_MAX;
+    double maxY = -DOUBLE_MAX;
+    double minY = DOUBLE_MAX;
     // double maxZ = DOUBLE_MIN;
-    float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
-    float minZ = FLOAT_MAX;
+    double maxZ = -DOUBLE_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+    double minZ = DOUBLE_MAX;
 
+    double curX;
+    double curY;
+    double curZ;
     POS_3D curPos;
     double HPWL;
     for (Pin *curPin : netPins)
     {
         curPos = curPin->getAbsolutePos();
-        minX = min(minX, curPos.x);
-        maxX = max(maxX, curPos.x);
-        minY = min(minY, curPos.y);
-        maxY = max(maxY, curPos.y);
-        minZ = min(minZ, curPos.z);
-        maxZ = max(maxZ, curPos.z);
+        curX = curPos.x;
+        curY = curPos.y;
+        curZ = curPos.z;
+        minX = min(minX, curX);
+        maxX = max(maxX, curX);
+        minY = min(minY, curY);
+        maxY = max(maxY, curY);
+        minZ = min(minZ, curZ);
+        maxZ = max(maxZ, curZ);
     }
     if (!gArg.CheckExist("3DIC"))
     {
@@ -50,56 +56,63 @@ double Net::calcNetHPWL()
 
 double Net::calcBoundPin()
 {
-    float maxX = -FLOAT_MAX;
-    float minX = FLOAT_MAX;
+    // double maxX = DOUBLE_MIN;
+    double maxX = -DOUBLE_MAX;
+    double minX = DOUBLE_MAX;
     // double maxY = DOUBLE_MIN;
-    float maxY = -FLOAT_MAX;
-    float minY = FLOAT_MAX;
+    double maxY = -DOUBLE_MAX;
+    double minY = DOUBLE_MAX;
     // double maxZ = DOUBLE_MIN;
-    float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
-    float minZ = FLOAT_MAX;
+    double maxZ = -DOUBLE_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+    double minZ = DOUBLE_MAX;
 
+    double curX;
+    double curY;
+    double curZ;
     POS_3D curPos;
     double HPWL;
 
     for (Pin *curPin : netPins)
     {
-        curPos= curPin->getAbsolutePos();
-        //!!!!! assume cusPos.x/y/z always >= 0!!!
-        assert(curPos.z == 0);
-        if (curPos.x < minX)
+        curPos = curPin->getAbsolutePos();
+        curX = curPos.x;
+        curY = curPos.y;
+        curZ = curPos.z;
+        //!!!!! assume curX curY curZ always >= 0!!!
+        assert(curZ == 0);
+        if (curX < minX)
         {
-            minX = curPos.x;
+            minX = curX;
             boundPinXmin = curPin;
         }
 
-        if (curPos.x > maxX)
+        if (curX > maxX)
         {
-            maxX = curPos.x;
+            maxX = curX;
             boundPinXmax = curPin;
         }
 
-        if (curPos.y < minY)
+        if (curY < minY)
         {
-            minY = curPos.y;
+            minY = curY;
             boundPinYmin = curPin;
         }
 
-        if (curPos.y > maxY)
+        if (curY > maxY)
         {
-            maxY = curPos.y;
+            maxY = curY;
             boundPinYmax = curPin;
         }
 
-        if (curPos.z < minZ)
+        if (curZ < minZ)
         {
-            minZ = curPos.z;
+            minZ = curZ;
             boundPinZmin = curPin;
         }
 
-        if (curPos.z > maxZ)
+        if (curZ > maxZ)
         {
-            maxZ = curPos.z;
+            maxZ = curZ;
             boundPinZmax = curPin;
         }
     }

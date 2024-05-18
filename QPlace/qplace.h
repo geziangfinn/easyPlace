@@ -2,6 +2,8 @@
 #define QPLACE_H
 //! qplace: quadratic placement, used to create an initial placement for ePlace
 #include <Eigen/SparseCore>
+#include <Eigen/IterativeLinearSolvers>
+#include <unsupported/Eigen/IterativeSolvers>
 #include "global.h"
 #include "placedb.h"
 #include "arghandler.h"
