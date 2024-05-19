@@ -32,6 +32,7 @@ sample command:
 * [ePlace](https://dl.acm.org/doi/10.1145/2699873)
 * [ePlace-MS](https://ieeexplore.ieee.org/document/7008518)
 * [RePlAce](https://ieeexplore.ieee.org/document/8418790)
+* [Xplace](https://github.com/cuhk-eda/Xplace)
 
 # Authors
 Ziang Ge and Yikai Liu, supervised by Prof. [Pingqiang Zhou](https://faculty.sist.shanghaitech.edu.cn/faculty/zhoupq/home.html) at [ShanghaiTech University](https://www.shanghaitech.edu.cn/)
