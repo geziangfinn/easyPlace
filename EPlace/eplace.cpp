@@ -500,8 +500,8 @@ void EPlacer_2D::densityGradientUpdate()
         densityGradient[index].SetZero();
 
         VECTOR_2D localSmoothLengthScale; // see ePlace paper page 15 or RePlace opt.cpp line 1460
-        localSmoothLengthScale.x = 1;
-        localSmoothLengthScale.y = 1;
+        localSmoothLengthScale.x = 1.0;
+        localSmoothLengthScale.y = 1.0;
 
         CRect rectForCurNode;
         rectForCurNode.ll = curNode->getLL_2D();
@@ -511,21 +511,22 @@ void EPlacer_2D::densityGradientUpdate()
         //! binStart and binEnd should be calculated with inflated cell width and height, see replace charge.cpp line 408
         POS_3D cellCenter = curNode->getCenter();
 
-        if (!curNode->isMacro)
+        // if (!curNode->isMacro)
+        // {
+        //! local smooth: not only for std cells because there may be small macros, like in MMS bigblue3
+        if (float_less(curNode->getWidth(), binStep.x))
         {
-            if (float_less(curNode->getWidth(), binStep.x))
-            {
-                localSmoothLengthScale.x = curNode->getWidth() / binStep.x;
-                rectForCurNode.ll.x = cellCenter.x - 0.5 * binStep.x;
-                rectForCurNode.ur.x = cellCenter.x + 0.5 * binStep.x;
-            }
-            if (float_less(curNode->getHeight(), binStep.y))
-            {
-                localSmoothLengthScale.y = curNode->getHeight() / binStep.y;
-                rectForCurNode.ll.y = cellCenter.y - 0.5 * binStep.y;
-                rectForCurNode.ur.y = cellCenter.y + 0.5 * binStep.y;
-            }
+            localSmoothLengthScale.x = curNode->getWidth() / binStep.x;
+            rectForCurNode.ll.x = cellCenter.x - 0.5 * binStep.x;
+            rectForCurNode.ur.x = cellCenter.x + 0.5 * binStep.x;
         }
+        if (float_less(curNode->getHeight(), binStep.y))
+        {
+            localSmoothLengthScale.y = curNode->getHeight() / binStep.y;
+            rectForCurNode.ll.y = cellCenter.y - 0.5 * binStep.y;
+            rectForCurNode.ur.y = cellCenter.y + 0.5 * binStep.y;
+        }
+        // }
 
         VECTOR_2D_INT binStartIdx; // binStartIdx: index the index of the first bin that has overlap with a cell on X/Y direction
         VECTOR_2D_INT binEndIdx;
@@ -582,7 +583,7 @@ void EPlacer_2D::totalGradientUpdate()
         totalGradient[index].SetZero();
         assert(index == curNodeOrFiller->idx);
 
-        // precondition
+        //! precondition
         float connectedNetNum = curNodeOrFiller->modulePins.size();
         // printf("Connected net num:%d, Pin count:%d\n",connectedNetNum,placer->ePlaceNodesAndFillers[idx]->modulePins.size());
         // assert(connectedNetNum == placer->ePlaceNodesAndFillers[idx]->modulePins.size());
@@ -708,7 +709,18 @@ void EPlacer_2D::updatePenaltyFactor()
 {
     // printf("penalty factor = %.10f\n", lambda);
     float curHPWL = db->calcHPWL();
-    float multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(curHPWL - lastHPWL) / DELTA_HPWL_REF + 1.0)); // see ePlace-3D code opt.cpp line 1523
+    float multiplier;
+    double deltaHPWL = curHPWL - lastHPWL;
+    if ((deltaHPWL) < 0.0) //?? what if (curHPWL - lastHPWL)<0????? never considered before 2024.5.19
+    {
+        // cout << "multiplier is: " << pow(PENALTY_MULTIPLIER_BASE, (-(deltaHPWL) / DELTA_HPWL_REF + 1.0)) << " when < 0" << endl;
+        multiplier = PENALTY_MULTIPLIER_UPPERBOUND;
+    }
+    else
+    {
+        multiplier = pow(PENALTY_MULTIPLIER_BASE, (-(deltaHPWL) / DELTA_HPWL_REF + 1.0)); // see ePlace-3D code opt.cpp line 1523
+    }
+
     if (float_greater(multiplier, PENALTY_MULTIPLIER_UPPERBOUND))
     {
         multiplier = PENALTY_MULTIPLIER_UPPERBOUND;
@@ -878,29 +890,29 @@ void EPlacer_2D::binNodeDensityUpdate()
         rectForCurNode.ll = curNode->getLL_2D();
         rectForCurNode.ur = curNode->getUR_2D();
 
-        if (!curNode->isMacro)
-        {
-            //! beware: local smooth on x and y dimension!
-            //! binStart and binEnd should be calculated with inflated cell width and height, see replace bin.cpp line 1807
-            POS_3D cellCenter = curNode->getCenter();
+        //! beware: local smooth on x and y dimension!
+        //! binStart and binEnd should be calculated with inflated cell width and height, see replace bin.cpp line 1807
+        //! local smooth: not only for std cells because there may be small macros, like in MMS bigblue3
+        POS_3D cellCenter = curNode->getCenter();
 
-            if (float_less(curNode->getWidth(), binStep.x))
-            {
-                localSmoothLengthScale.x = curNode->getWidth() / binStep.x;
-                rectForCurNode.ll.x = cellCenter.x - 0.5 * binStep.x;
-                rectForCurNode.ur.x = cellCenter.x + 0.5 * binStep.x;
-            }
-            if (float_less(curNode->getHeight(), binStep.y))
-            {
-                localSmoothLengthScale.y = curNode->getHeight() / binStep.y;
-                rectForCurNode.ll.y = cellCenter.y - 0.5 * binStep.y;
-                rectForCurNode.ur.y = cellCenter.y + 0.5 * binStep.y;
-            }
+        if (float_less(curNode->getWidth(), binStep.x))
+        {
+            localSmoothLengthScale.x = curNode->getWidth() / binStep.x;
+            rectForCurNode.ll.x = cellCenter.x - 0.5 * binStep.x;
+            rectForCurNode.ur.x = cellCenter.x + 0.5 * binStep.x;
         }
-        else
+        if (float_less(curNode->getHeight(), binStep.y))
+        {
+            localSmoothLengthScale.y = curNode->getHeight() / binStep.y;
+            rectForCurNode.ll.y = cellCenter.y - 0.5 * binStep.y;
+            rectForCurNode.ur.y = cellCenter.y + 0.5 * binStep.y;
+        }
+
+        if (curNode->isMacro)
         {
             macroDensityScaling = true;
         }
+
         VECTOR_2D_INT binStartIdx; // binStartIdx: index the index of the first bin that has overlap with a cell on X/Y direction
         VECTOR_2D_INT binEndIdx;
         binStartIdx.x = INT_DOWN((rectForCurNode.ll.x - db->coreRegion.ll.x) / binStep.x);
@@ -935,9 +947,9 @@ void EPlacer_2D::binNodeDensityUpdate()
             {
 
                 float overlapArea = getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
-                if (macroDensityScaling)
+                if (curNode->isMacro)
                 {
-                    bins[i][j]->nodeDensity += targetDensity * overlapArea;
+                    bins[i][j]->nodeDensity += localSmoothLengthScale.x * localSmoothLengthScale.y * targetDensity * overlapArea;
                 }
                 else
                 {

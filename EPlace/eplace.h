@@ -8,7 +8,7 @@
 #include "plot.h"
 
 #define DELTA_HPWL_REF 350000
-#define PENALTY_MULTIPLIER_BASE 1.1
+#define PENALTY_MULTIPLIER_BASE 1.05 //1.05, equals PENALTY_MULTIPLIER_UPPERBOUND, follow Xplace(param_scheduler.py, step_density_weight()) and RePlAce
 #define PENALTY_MULTIPLIER_UPPERBOUND 1.05
 #define PENALTY_MULTIPLIER_LOWERBOUND 0.95
 
