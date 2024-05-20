@@ -61,7 +61,7 @@ bool EplaceNesterovOpt<T>::stop_condition()
     }
     else
     {
-        targetOverflow = 0.1f;
+        targetOverflow = 0.10f;
     }
 
     float cGPtargetOverflow = 0.07f;
@@ -151,7 +151,7 @@ void EplaceNesterovOpt<T>::opt_step()
         }
         break;
     case cGP:
-        if (gArg.CheckExist("fullPlot"))
+        if (iter_count % 10 == 0 && gArg.CheckExist("fullPlot"))
         {
             placer->plotCurrentPlacement("cGP Iter-" + to_string(iter_count));
         }
@@ -300,6 +300,7 @@ void EplaceNesterovOpt<VECTOR_3D>::opt_step_bktrk()
         float new_step_size = 1 / new_lipschitz_constant;
         if (BKTRK_EPS * step_size <= new_step_size)
         {
+            step_size = new_step_size;
             break;
         }
         printf("bktrk!\n");
