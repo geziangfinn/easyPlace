@@ -491,7 +491,7 @@ ITER mLG: %d\n\
         }
         if (gArg.CheckExist("fullPlot"))
         {
-            placeDB->plotCurrentPlacement("mLG ite_" + to_string(j + 1));
+            PLOTTING::plotCurrentPlacement("mLG ite_" + to_string(j + 1), placeDB);
         }
     }
 
@@ -537,7 +537,7 @@ void SAMacroLegalizer::SAMacroLegalization()
                 k / 100 + 1, SAtemperature, r.x, r.y,
                 // tot_mac_hpwl ,
                 totalHPWL, totalCellAreaCovered, totalMacroOverlap);
-            cout<<"ite100time: "<<ite100time<<endl;
+            cout << "ite100time: " << ite100time << endl;
         }
     }
 }

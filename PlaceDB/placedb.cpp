@@ -309,7 +309,7 @@ double PlaceDB::calcModuleHPWL(Module *curModule)
 
         for (Pin *curPin : curModulePin->net->netPins)
         {
-            curPos = curPin->absolutePos;//!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
+            curPos = curPin->absolutePos; //!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
             // curPos = curPin->fetchAbsolutePos();
             minX = min(minX, curPos.x);
             maxX = max(maxX, curPos.x);
@@ -700,77 +700,77 @@ void PlaceDB::outputSCL()
     fclose(out);
 }
 
-void PlaceDB::plotCurrentPlacement(string imageName)
-{
-    string plotPath;
-    if (!gArg.GetString("plotPath", &plotPath))
-    {
-        plotPath = "./";
-    }
+// void PlaceDB::plotCurrentPlacement(string imageName)
+// {
+//     string plotPath;
+//     if (!gArg.GetString("plotPath", &plotPath))
+//     {
+//         plotPath = "./";
+//     }
 
-    float chipRegionWidth = chipRegion.ur.x - chipRegion.ll.x;
-    float chipRegionHeight = chipRegion.ur.y - chipRegion.ll.y;
+//     float chipRegionWidth = chipRegion.ur.x - chipRegion.ll.x;
+//     float chipRegionHeight = chipRegion.ur.y - chipRegion.ll.y;
 
-    int minImgaeLength = 1000;
+//     int minImgaeLength = 1000;
 
-    int imageHeight;
-    int imageWidth;
+//     int imageHeight;
+//     int imageWidth;
 
-    float opacity = 0.7;
-    int xMargin = 30, yMargin = 30;
+//     float opacity = 0.7;
+//     int xMargin = 30, yMargin = 30;
 
-    if (chipRegionWidth < chipRegionHeight)
-    {
-        imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
-        imageWidth = minImgaeLength;
-    }
-    else
-    {
-        imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
-        imageHeight = minImgaeLength;
-    }
+//     if (chipRegionWidth < chipRegionHeight)
+//     {
+//         imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
+//         imageWidth = minImgaeLength;
+//     }
+//     else
+//     {
+//         imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
+//         imageHeight = minImgaeLength;
+//     }
 
-    CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
+//     CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
 
-    float unitX = imageWidth / chipRegionWidth,
-          unitY = imageHeight / chipRegionHeight;
+//     float unitX = imageWidth / chipRegionWidth,
+//           unitY = imageHeight / chipRegionHeight;
 
-    for (Module *curTerminal : dbTerminals)
-    {
-        assert(curTerminal);
-        // ignore pin's location
-        if (curTerminal->isNI)
-        {
-            continue;
-        }
-        int x1 = getX(chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
-        img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
-    }
+//     for (Module *curTerminal : dbTerminals)
+//     {
+//         assert(curTerminal);
+//         // ignore pin's location
+//         if (curTerminal->isNI)
+//         {
+//             continue;
+//         }
+//         int x1 = getX(chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
+//         int x2 = getX(chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
+//         int y1 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
+//         int y2 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
+//         img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
+//     }
 
-    for (Module *curNode : dbNodes)
-    {
-        assert(curNode);
-        int x1 = getX(chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-        if (curNode->isMacro)
-        {
-            img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
-        }
-        else
-        {
-            img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
-        }
-    }
+//     for (Module *curNode : dbNodes)
+//     {
+//         assert(curNode);
+//         int x1 = getX(chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+//         int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+//         int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+//         int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
+//         if (curNode->isMacro)
+//         {
+//             img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
+//         }
+//         else
+//         {
+//             img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+//         }
+//     }
 
-    img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
-    img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
-    cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
-}
+//     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
+//     img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
+//     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
+// }
 
 void PlaceDB::addNoise()
 {

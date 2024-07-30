@@ -7,6 +7,7 @@
 
 #include "global.h"
 #include "eplace.h"
+#include "plot.h"
 #include "optutils.hpp"
 #include "Eigen/Dense"
 
@@ -35,7 +36,7 @@ template <typename T>
 class EplaceNesterovOpt : public FirstOrderOptimizer<T>
 {
 public:
-    EplaceNesterovOpt(EPlacer_2D *placer) : placer(placer){};
+    EplaceNesterovOpt(EPlacer_2D *placer) : placer(placer) {};
     // void opt();
 private:
     bool stop_condition();
@@ -141,19 +142,19 @@ void EplaceNesterovOpt<T>::opt_step()
     case mGP:
         if (iter_count % 10 == 0 && gArg.CheckExist("fullPlot"))
         {
-            placer->plotCurrentPlacement("mGP Iter-" + to_string(iter_count));
+            PLOTTING::plotEPlace_2D("mGP Iter-" + to_string(iter_count), placer);
         }
         break;
     case FILLERONLY:
         if (gArg.CheckExist("fullPlot"))
         {
-            placer->plotCurrentPlacement("FILLERONLY Iter-" + to_string(iter_count));
+            PLOTTING::plotEPlace_2D("FILLERONLY Iter-" + to_string(iter_count), placer);
         }
         break;
     case cGP:
         if (iter_count % 10 == 0 && gArg.CheckExist("fullPlot"))
         {
-            placer->plotCurrentPlacement("cGP Iter-" + to_string(iter_count));
+            PLOTTING::plotEPlace_2D("cGP Iter-" + to_string(iter_count), placer);
         }
         break;
     default:

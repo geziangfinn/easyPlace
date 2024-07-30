@@ -3,6 +3,7 @@
 #include "global.h"
 #include "objects.h"
 #include "placedb.h"
+#include "plot.h"
 #define ABACUS_TRIAL true
 #define ABACUS_FINAL false
 class Obstacle : public CRect

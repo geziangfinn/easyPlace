@@ -766,90 +766,90 @@ void EPlacer_2D::showInfo()
          << endl;
 }
 
-void EPlacer_2D::plotCurrentPlacement(string imageName)
-{
-    string plotPath;
-    if (!gArg.GetString("plotPath", &plotPath))
-    {
-        plotPath = "./";
-    }
+// void EPlacer_2D::plotCurrentPlacement(string imageName)
+// {
+//     string plotPath;
+//     if (!gArg.GetString("plotPath", &plotPath))
+//     {
+//         plotPath = "./";
+//     }
 
-    float chipRegionWidth = db->chipRegion.ur.x - db->chipRegion.ll.x;
-    float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
+//     float chipRegionWidth = db->chipRegion.ur.x - db->chipRegion.ll.x;
+//     float chipRegionHeight = db->chipRegion.ur.y - db->chipRegion.ll.y;
 
-    int minImgaeLength = 1000;
+//     int minImgaeLength = 1000;
 
-    int imageHeight;
-    int imageWidth;
+//     int imageHeight;
+//     int imageWidth;
 
-    float opacity = 0.7;
-    int xMargin = 30, yMargin = 30;
+//     float opacity = 0.7;
+//     int xMargin = 30, yMargin = 30;
 
-    if (chipRegionWidth < chipRegionHeight)
-    {
-        imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
-        imageWidth = minImgaeLength;
-    }
-    else
-    {
-        imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
-        imageHeight = minImgaeLength;
-    }
+//     if (chipRegionWidth < chipRegionHeight)
+//     {
+//         imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
+//         imageWidth = minImgaeLength;
+//     }
+//     else
+//     {
+//         imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
+//         imageHeight = minImgaeLength;
+//     }
 
-    CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
+//     CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
 
-    float unitX = imageWidth / chipRegionWidth,
-          unitY = imageHeight / chipRegionHeight;
+//     float unitX = imageWidth / chipRegionWidth,
+//           unitY = imageHeight / chipRegionHeight;
 
-    for (Module *curTerminal : db->dbTerminals)
-    {
-        assert(curTerminal);
-        // ignore pin's location
-        if (curTerminal->isNI)
-        {
-            continue;
-        }
-        int x1 = getX(db->chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(db->chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
-        img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
-    }
+//     for (Module *curTerminal : db->dbTerminals)
+//     {
+//         assert(curTerminal);
+//         // ignore pin's location
+//         if (curTerminal->isNI)
+//         {
+//             continue;
+//         }
+//         int x1 = getX(db->chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
+//         int x2 = getX(db->chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
+//         int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
+//         int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
+//         img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
+//     }
 
-    for (Module *curNode : db->dbNodes)
-    {
-        assert(curNode);
-        int x1 = getX(db->chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-        if (curNode->isMacro)
-        {
-            img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
-        }
-        else
-        {
-            img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
-        }
-    }
+//     for (Module *curNode : db->dbNodes)
+//     {
+//         assert(curNode);
+//         int x1 = getX(db->chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+//         int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+//         int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+//         int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
+//         if (curNode->isMacro)
+//         {
+//             img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
+//         }
+//         else
+//         {
+//             img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+//         }
+//     }
 
-    if ((gArg.CheckExist("debug") || placementStage == FILLERONLY))
-    {
-        for (Module *curNode : ePlaceFillers)
-        {
-            assert(curNode);
-            int x1 = getX(db->chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
-            int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
-            int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
-            int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-            img.draw_rectangle(x1, y1, x2, y2, Green, opacity);
-        }
-    }
+//     if ((gArg.CheckExist("debug") || placementStage == FILLERONLY))
+//     {
+//         for (Module *curNode : ePlaceFillers)
+//         {
+//             assert(curNode);
+//             int x1 = getX(db->chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+//             int x2 = getX(db->chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+//             int y1 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+//             int y2 = getY(chipRegionHeight, db->chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
+//             img.draw_rectangle(x1, y1, x2, y2, Green, opacity);
+//         }
+//     }
 
-    img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
-    img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
-    cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
-}
+//     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
+//     img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
+//     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
+// }
 
 vector<VECTOR_3D> EPlacer_2D::getModulePositions(vector<Module *> modules)
 {
