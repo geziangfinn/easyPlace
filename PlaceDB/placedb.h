@@ -1,7 +1,7 @@
 #ifndef PLACEDB_H
 #define PLACEDB_H
 #include "objects.h"
-#include "plot.h"
+// #include "plot.h"
 class PlaceDB
 {
 public:
@@ -78,6 +78,8 @@ public:
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 
+    void removeBlockedSite();// calculate intervals of siterows considering macros and terminals that block sites, see void RemoveFixedBlockSite() and void RemoveMacroSite() in ntuplace
+
     void setChipRegion_2D();
 
     void showDBInfo();
@@ -89,6 +91,6 @@ public:
     void outputNets();
     void outputSCL();
 
-    void plotCurrentPlacement(string);
+    // void plotCurrentPlacement(string);
 };
 #endif

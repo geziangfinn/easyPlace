@@ -1,5 +1,7 @@
 # easyPlace
 Reimplementation of the electrostatic-based VLSI placement algorithm: ePlace and ePlace-MS with clean C++ code. This code is for those who try to understand the electrostatics-based placement. 
+
+Reimplementation of Abacus is applied for internal std cell legalization
 # How to Build
 To build, go to the root directory.
 ```
@@ -33,6 +35,7 @@ sample command:
 * [ePlace-MS](https://ieeexplore.ieee.org/document/7008518)
 * [RePlAce](https://ieeexplore.ieee.org/document/8418790)
 * [Xplace](https://github.com/cuhk-eda/Xplace)
+* [Abacus](https://dl.acm.org/doi/10.1145/1353629.1353640)
 
 # Authors
 Ziang Ge and Yikai Liu, supervised by Prof. [Pingqiang Zhou](https://faculty.sist.shanghaitech.edu.cn/faculty/zhoupq/home.html) at [ShanghaiTech University](https://www.shanghaitech.edu.cn/)

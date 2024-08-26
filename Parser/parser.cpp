@@ -121,8 +121,9 @@ int BookshelfParser::ReadSCLFile(string file, PlaceDB &db)
 		{
 			double subOrigin = atof(tmp3); //! subrowOrigin
 			double numSites = atof(tmp6);
-			// vSites.back().m_interval.push_back(atof(tmp3));
-			// vSites.back().m_interval.push_back((atof(tmp6) * SiteWidth) + atof(tmp3));//! tmp3: subrow origin!
+			// initialize interval
+			vSites.back().intervals.push_back(Interval(subOrigin, (numSites * SiteWidth) + subOrigin));
+
 			vSites.back().start = POS_2D(subOrigin, vSites.back().bottom);
 			vSites.back().end = POS_2D((numSites * SiteWidth) + subOrigin, vSites.back().bottom);
 			// printf("get numsites: %f %f\n", atof(tmp3), ( atof( tmp6 )*SiteWidth ) + atof( tmp3 ) );

@@ -57,7 +57,7 @@ void QPPlacer::quadraticPlacement()
 
         if (gArg.CheckExist("debug") || gArg.CheckExist("fullPlot"))
         {
-            db->plotCurrentPlacement("Initial placement iteration " + to_string(i));
+            PLOTTING::plotCurrentPlacement("Initial placement iteration " + to_string(i), db);
         }
 
         time_end(&qp_time);

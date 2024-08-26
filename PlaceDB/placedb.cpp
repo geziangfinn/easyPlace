@@ -309,7 +309,7 @@ double PlaceDB::calcModuleHPWL(Module *curModule)
 
         for (Pin *curPin : curModulePin->net->netPins)
         {
-            curPos = curPin->absolutePos;//!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
+            curPos = curPin->absolutePos; //!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
             // curPos = curPin->fetchAbsolutePos();
             minX = min(minX, curPos.x);
             maxX = max(maxX, curPos.x);
@@ -335,6 +335,172 @@ void PlaceDB::moveNodesCenterToCenter()
     for (Module *curModule : dbNodes)
     {
         setModuleCenter_2D(curModule, coreRegionCenter.x, coreRegionCenter.y);
+    }
+}
+
+void PlaceDB::removeBlockedSite() // update intervals
+{
+    //! ignore terminals that are outside the core region
+    //! overlap between macros should be eliminated first! (macro legalization)
+
+    // 1. count all terminal and macros
+    vector<CRect> obstacles;
+    obstacles.clear();
+    for (Module *curTerminal : dbTerminals)
+    {
+        if (float_greater(coreRegion.ur.y, curTerminal->getLL_2D().y) && float_less(coreRegion.ll.y, curTerminal->getUR_2D().y)) // overlap in y direction
+        {
+            if (float_greater(coreRegion.ur.x, curTerminal->getLL_2D().x) && float_less(coreRegion.ll.x, curTerminal->getUR_2D().x)) // overlap in x direction
+            {
+                CRect newObstacle;
+                newObstacle.ll = curTerminal->getLL_2D();
+                newObstacle.ur = curTerminal->getUR_2D();
+                obstacles.push_back(newObstacle);
+            }
+        }
+    }
+
+    for (Module *curNode : dbNodes)
+    {
+        if (curNode->isMacro)
+        {
+            CRect newObstacle;
+            newObstacle.ll = curNode->getLL_2D();
+            newObstacle.ur = curNode->getUR_2D();
+            obstacles.push_back(newObstacle);
+        }
+    }
+    //! sort obstacles by x coordinate first
+    sort(obstacles.begin(), obstacles.end(), [=](CRect a, CRect b)
+         {
+            if (!float_equal(a.ll.x , b.ll.x))
+            {
+                return float_less(a.ll.x ,b.ll.x);
+                
+            }
+            else if (!float_equal(a.ll.y , b.ll.y))
+            {
+                return float_less(a.ll.y ,b.ll.y);
+            }
+            else
+            {
+                // terminals/macros overlap!!
+                cerr<<"TERMINALS/MACROS OVERLAP!\n";
+                exit(0);
+            } });
+
+    // 2. remove blocked sites and update intervals
+    double siteStep = dbSiteRows.front().step; //! assume step for all rows are identical! so it's ok to use front()
+
+    for (CRect curObstacle : obstacles)
+    {
+        vector<SiteRow>::iterator iteBeginRow, iteEndRow;
+        // find the begin row and the end row (of all rows that are blocked by curObstacle)
+        //!!!! important assumption here: dbSiteRows is sorted by bottom coordinate in an increasing order!
+        for (iteBeginRow = dbSiteRows.begin(); iteBeginRow < dbSiteRows.end(); iteBeginRow++)
+        {
+            if (iteBeginRow->bottom + iteBeginRow->height > curObstacle.ll.y)
+            {
+                break;
+            }
+        }
+
+        for (iteEndRow = iteBeginRow; iteEndRow < dbSiteRows.end(); iteEndRow++)
+        {
+            if (iteEndRow->bottom + iteEndRow->height >= curObstacle.ur.y)
+            {
+                break;
+            }
+        }
+
+        if (iteEndRow == dbSiteRows.end())
+        {
+            iteEndRow--;
+        }
+        assert(iteBeginRow != dbSiteRows.end());
+
+        Interval tempInterval;
+
+        for (vector<SiteRow>::iterator curRow = iteBeginRow; curRow <= iteEndRow; curRow++)
+        {
+            for (int i = 0; i < (signed)curRow->intervals.size(); i++)
+            {
+                tempInterval = curRow->intervals[i];
+
+                if (tempInterval.start >= curObstacle.ur.x || tempInterval.end <= curObstacle.ll.x) // screen unnecessary checks
+                {
+                    continue;
+                }
+
+                if (tempInterval.start >= curObstacle.ll.x && tempInterval.end <= curObstacle.ur.x) // fully blocked
+                {
+                    //    ---
+                    // MMMMMMMMM
+                    curRow->intervals.erase(vector<Interval>::iterator(&(curRow->intervals[i])));
+                }
+                else if (tempInterval.end > curObstacle.ur.x && tempInterval.start >= curObstacle.ll.x)
+                {
+                    // ------      -----
+                    // MMM      MMMMM
+                    curRow->intervals[i].start = curObstacle.ur.x;
+                }
+                else if (tempInterval.start < curObstacle.ll.x && tempInterval.end <= curObstacle.ur.x)
+                {
+                    // ---------       -----
+                    //     MMMMM          MMMMM
+                    curRow->intervals[i].end = curObstacle.ll.x;
+                }
+                else if (tempInterval.start < curObstacle.ll.x && tempInterval.end > curObstacle.ur.x)
+                {
+                    // -----------
+                    //    MMMM
+                    curRow->intervals[i].end = curObstacle.ll.x;
+                    curRow->intervals.insert(vector<Interval>::iterator(&(curRow->intervals[i + 1])), Interval(curObstacle.ur.x, tempInterval.end));
+                }
+                else
+                {
+                    printf("Warning: Module Romoving Error\n");
+                    // exit(-1);
+                }
+            }
+        }
+    }
+    
+    //! 3. align intervals to sites after updating intervals, see ntuplace: FixFreeSiteBySiteStep(). Here we need to update the end and start of a site row, so end.x-start.x is an positive integer multiple of site step(site width)
+    for (auto curRowIter = dbSiteRows.begin(); curRowIter != dbSiteRows.end(); curRowIter++)
+    {
+        //? should start.x and end.x be integers too??? check ntuplace
+
+        for (auto curIntervalIter = curRowIter->intervals.begin(); curIntervalIter != curRowIter->intervals.end();)
+        {
+            double intervalWidth = curIntervalIter->end - curIntervalIter->start;
+            // subRowWidth might be less than 0 when:
+            //    ------
+            //   OOOOO
+            if (float_less(intervalWidth, siteStep)) // assume iter->step > 0!
+            {
+                curIntervalIter = curRowIter->intervals.erase(curIntervalIter);
+            }
+            else
+            {
+                double newLeft = ceil((curIntervalIter->start - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
+                double newRight = floor((curIntervalIter->end - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
+                double newIntervalWidth = newRight - newLeft;
+                assert(newIntervalWidth >= siteStep);
+                if (float_greater(newIntervalWidth, 0.0))
+                {
+                    curIntervalIter->start = newLeft;
+                    curIntervalIter->end = newRight;
+                }
+                else if (float_less(newIntervalWidth, 0.0))
+                {
+                    // newIntervalWidth should >= 0.0
+                    cerr << "sub row new width < 0 when it should not\n";
+                    exit(0);
+                }
+                curIntervalIter++;
+            }
+        }
     }
 }
 
@@ -700,77 +866,77 @@ void PlaceDB::outputSCL()
     fclose(out);
 }
 
-void PlaceDB::plotCurrentPlacement(string imageName)
-{
-    string plotPath;
-    if (!gArg.GetString("plotPath", &plotPath))
-    {
-        plotPath = "./";
-    }
+// void PlaceDB::plotCurrentPlacement(string imageName)
+// {
+//     string plotPath;
+//     if (!gArg.GetString("plotPath", &plotPath))
+//     {
+//         plotPath = "./";
+//     }
 
-    float chipRegionWidth = chipRegion.ur.x - chipRegion.ll.x;
-    float chipRegionHeight = chipRegion.ur.y - chipRegion.ll.y;
+//     float chipRegionWidth = chipRegion.ur.x - chipRegion.ll.x;
+//     float chipRegionHeight = chipRegion.ur.y - chipRegion.ll.y;
 
-    int minImgaeLength = 1000;
+//     int minImgaeLength = 1000;
 
-    int imageHeight;
-    int imageWidth;
+//     int imageHeight;
+//     int imageWidth;
 
-    float opacity = 0.7;
-    int xMargin = 30, yMargin = 30;
+//     float opacity = 0.7;
+//     int xMargin = 30, yMargin = 30;
 
-    if (chipRegionWidth < chipRegionHeight)
-    {
-        imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
-        imageWidth = minImgaeLength;
-    }
-    else
-    {
-        imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
-        imageHeight = minImgaeLength;
-    }
+//     if (chipRegionWidth < chipRegionHeight)
+//     {
+//         imageHeight = 1.0 * chipRegionHeight / (chipRegionWidth / minImgaeLength);
+//         imageWidth = minImgaeLength;
+//     }
+//     else
+//     {
+//         imageWidth = 1.0 * chipRegionWidth / (chipRegionHeight / minImgaeLength);
+//         imageHeight = minImgaeLength;
+//     }
 
-    CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
+//     CImg<unsigned char> img(imageWidth + 2 * xMargin, imageHeight + 2 * yMargin, 1, 3, 255);
 
-    float unitX = imageWidth / chipRegionWidth,
-          unitY = imageHeight / chipRegionHeight;
+//     float unitX = imageWidth / chipRegionWidth,
+//           unitY = imageHeight / chipRegionHeight;
 
-    for (Module *curTerminal : dbTerminals)
-    {
-        assert(curTerminal);
-        // ignore pin's location
-        if (curTerminal->isNI)
-        {
-            continue;
-        }
-        int x1 = getX(chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
-        img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
-    }
+//     for (Module *curTerminal : dbTerminals)
+//     {
+//         assert(curTerminal);
+//         // ignore pin's location
+//         if (curTerminal->isNI)
+//         {
+//             continue;
+//         }
+//         int x1 = getX(chipRegion.ll.x, curTerminal->getLL_2D().x, unitX) + xMargin;
+//         int x2 = getX(chipRegion.ll.x, curTerminal->getUR_2D().x, unitX) + xMargin;
+//         int y1 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getLL_2D().y, unitY) + yMargin;
+//         int y2 = getY(chipRegionHeight, chipRegion.ll.y, curTerminal->getUR_2D().y, unitY) + yMargin;
+//         img.draw_rectangle(x1, y1, x2, y2, Blue, opacity);
+//     }
 
-    for (Module *curNode : dbNodes)
-    {
-        assert(curNode);
-        int x1 = getX(chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
-        int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
-        int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
-        int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
-        if (curNode->isMacro)
-        {
-            img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
-        }
-        else
-        {
-            img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
-        }
-    }
+//     for (Module *curNode : dbNodes)
+//     {
+//         assert(curNode);
+//         int x1 = getX(chipRegion.ll.x, curNode->getLL_2D().x, unitX) + xMargin;
+//         int x2 = getX(chipRegion.ll.x, curNode->getUR_2D().x, unitX) + xMargin;
+//         int y1 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getLL_2D().y, unitY) + yMargin;
+//         int y2 = getY(chipRegionHeight, chipRegion.ll.y, curNode->getUR_2D().y, unitY) + yMargin;
+//         if (curNode->isMacro)
+//         {
+//             img.draw_rectangle(x1, y1, x2, y2, Orange, opacity);
+//         }
+//         else
+//         {
+//             img.draw_rectangle(x1, y1, x2, y2, Red, opacity);
+//         }
+//     }
 
-    img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
-    img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
-    cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
-}
+//     img.draw_text(50, 50, imageName.c_str(), Black, NULL, 1, 30);
+//     img.save_bmp(string(plotPath + imageName + string(".bmp")).c_str());
+//     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
+// }
 
 void PlaceDB::addNoise()
 {

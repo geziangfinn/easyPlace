@@ -13,6 +13,7 @@ class Net;
 class Tier;
 class CRect;
 class PlaceDB;
+class Interval;
 
 class Net
 {
@@ -43,7 +44,6 @@ public:
 
     VECTOR_3D sumMax_LSE;
     VECTOR_3D sumMin_LSE;
-
 
     void init()
     {
@@ -102,15 +102,15 @@ public:
     POS_3D absolutePos;
     int direction; // 0 output  1 input  -1 not-define
     POS_3D getAbsolutePos();
-    POS_3D fetchAbsolutePos();// currently for mLG only
+    POS_3D fetchAbsolutePos(); // currently for mLG only
 
     VECTOR_3D eMin_WA;               // e^[(Xmin-Xi)/gamma] in WA model (X/Y/Z)
     VECTOR_3D eMax_WA;               // e^[(Xi-Xmax)/gamma] in WA model (X/Y/Z)
     VECTOR_3D_BOOL expZeroFlgMax_WA; // indicate if (Xi-Xmax)/gamma is too small that e^[(Xi-Xmax)/gamma] == 0
     VECTOR_3D_BOOL expZeroFlgMin_WA; // similar
 
-    VECTOR_3D eMin_LSE;             // e^[(Xmin-Xi)/gamma] in LSE model
-    VECTOR_3D eMax_LSE;             // e^[(Xi-Xmax)/gamma] in LSE model
+    VECTOR_3D eMin_LSE;               // e^[(Xmin-Xi)/gamma] in LSE model
+    VECTOR_3D eMax_LSE;               // e^[(Xi-Xmax)/gamma] in LSE model
     VECTOR_3D_BOOL expZeroFlgMax_LSE; // indicate if (Xi-Xmax)/gamma is too small that e^[(Xi-Xmax)/gamma] == 0
     VECTOR_3D_BOOL expZeroFlgMin_LSE; // similar
 
@@ -243,13 +243,13 @@ public:
         end.SetZero();
     }
 
-    double bottom;         // The bottom y coordinate of this SiteRow of sites
-    double height;         // The height of this SiteRow of sites
-    double step;           // The minimum x step of SiteRow.	by indark
-    POS_2D start;          // lower left coor of this row;
-    POS_2D end;            //! lower right coor of this row;
-    ORIENT orientation;    // donnie 2006-04-23  N (0) or S (1)
-    vector<Row> intervals; //!
+    double bottom;              // The bottom y coordinate of this SiteRow of sites
+    double height;              // The height of this SiteRow of sites
+    double step;                // The minimum x step of SiteRow.	by indark
+    POS_2D start;               // lower left coor of this row;
+    POS_2D end;                 //! lower right coor of this row;
+    ORIENT orientation;         // donnie 2006-04-23  N (0) or S (1)
+    vector<Interval> intervals; //!
     // double site_spacing;// site spacing in bookshelf format, equals to site width
     POS_2D getLL_2D();
     POS_2D getUR_2D();
@@ -297,5 +297,29 @@ public:
     vector<Module *> modules;
     vector<SiteRow *> siteRows;
     vector<Module *> terminals; // terminals: module that can't be moved
+};
+
+class Interval
+{
+    // horizontal intervals of placement siterows, only store x coordinate, instead of POS_2D
+    // there are intervals in rows because of macros or pre-defined dead zones.
+    // interval is not an empty! empty is the available space in a row that is not covered by std cells
+    // and interval is calculated without considering std cell locations
+public:
+    Interval()
+    {
+        SetZero();
+    }
+    Interval(float _start, float _end)
+    {
+        start = _start;
+        end = _end;
+    }
+    inline void SetZero()
+    {
+        start = end = 0.0; //!! 0.0!!!!
+    }
+    float start;
+    float end;
 };
 #endif

@@ -2,9 +2,9 @@
 #include "arghandler.h"
 #include "qplace.h"
 #include "eplace.h"
-#include "optimizer.h"
+// #include "optimizer.h"
 #include "legalizer.h"
-// #include "plot.h"
+#include "plot.h"
 #include <iostream>
 using namespace std;
 
@@ -72,9 +72,9 @@ int main(int argc, char *argv[])
     gArg.GetString("benchmarkName", &benchmarkName);
 
     parser.ReadPLFile(outputPath + "/" + benchmarkName + "-global.pl", *placedb, false);
-    placedb->plotCurrentPlacement("global_RESULT");
+    PLOTTING::plotCurrentPlacement("global_RESULT",placedb);
     AbacusLegalizer legalizer(placedb);
     legalizer.legalization();
-    placedb->plotCurrentPlacement("LEGALIZED_RESULT");
+    PLOTTING::plotCurrentPlacement("LEGALIZED_RESULT",placedb);
     placedb->outputBookShelf();
 }

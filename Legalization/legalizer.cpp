@@ -4,7 +4,7 @@ void AbacusLegalizer::legalization()
 {
     initialization();
     int cellCount = dbCells.size();
-    cout << cellCount << endl;
+    // cout << cellCount << endl;
     for (Module *curCell : dbCells)
     {
         // cout<<curCell->name<<endl;
@@ -98,8 +98,10 @@ void AbacusLegalizer::initialization()
     // segmentFaultCP("cp2");
     initializeCells();
     // segmentFaultCP("cp3");
-    initializeObstacles();
-    segmentFaultCP("cp4");
+    // initializeObstacles();
+    // segmentFaultCP("cp4");
+    // initializeSubrows();
+    // cout<<"\nusing new leal!\n";
     initializeSubrows();
 }
 
@@ -168,8 +170,9 @@ void AbacusLegalizer::initializeObstacles()
             } });
 }
 
-void AbacusLegalizer::initializeSubrows()
+void AbacusLegalizer::initializeSubrowsOld()
 {
+    // subrows actually equals intervals, so this function should be a member function of the placedb, which can be called by legalizer or detailed placer
     double siteStep = placeDB->dbSiteRows.front().step; //! assume step for all rows are identical!
 
     for (SiteRow curRow : placeDB->dbSiteRows) // generate subrows from dbRows
@@ -281,6 +284,47 @@ void AbacusLegalizer::initializeSubrows()
         }
     }
 
+    // sort subrows by y coordinate!
+    sort(subrows.begin(), subrows.end(), [=](AbacusRow a, AbacusRow b)
+         {
+         if (!float_equal(a.bottom , b.bottom))
+            {
+                return float_less(a.bottom , b.bottom);
+            }
+            else if (!float_equal(a.start.x , b.start.x))
+            {
+                return float_less(a.start.x ,b.start.x);
+            }
+            else
+            {
+                // terminals/macros overlap!!
+                cerr<<"SUBROWS OVERLAP!\n";
+                exit(0);
+            } });
+}
+
+void AbacusLegalizer::initializeSubrows()
+{
+    placeDB->removeBlockedSite();
+    double siteStep = placeDB->dbSiteRows.front().step;
+    for (SiteRow curRow : placeDB->dbSiteRows) // generate subrows from dbRows
+    {
+        for (Interval curInterval : curRow.intervals)
+        {
+            AbacusRow newRow;
+            newRow.start.x = curInterval.start;
+            newRow.start.y = curRow.bottom;
+
+            newRow.end.x = curInterval.end; //!
+            newRow.end.y = curRow.bottom;
+
+            newRow.bottom = curRow.bottom;
+            newRow.height = curRow.height;
+            newRow.step = siteStep;
+
+            subrows.push_back(newRow);
+        }
+    }
     // sort subrows by y coordinate!
     sort(subrows.begin(), subrows.end(), [=](AbacusRow a, AbacusRow b)
          {
@@ -491,7 +535,7 @@ ITER mLG: %d\n\
         }
         if (gArg.CheckExist("fullPlot"))
         {
-            placeDB->plotCurrentPlacement("mLG ite_" + to_string(j + 1));
+            PLOTTING::plotCurrentPlacement("mLG ite_" + to_string(j + 1), placeDB);
         }
     }
 
@@ -537,7 +581,7 @@ void SAMacroLegalizer::SAMacroLegalization()
                 k / 100 + 1, SAtemperature, r.x, r.y,
                 // tot_mac_hpwl ,
                 totalHPWL, totalCellAreaCovered, totalMacroOverlap);
-            cout<<"ite100time: "<<ite100time<<endl;
+            cout << "ite100time: " << ite100time << endl;
         }
     }
 }

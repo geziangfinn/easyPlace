@@ -5,6 +5,7 @@
 #include "opt.hpp"
 #include "nesterov.hpp"
 #include "legalizer.h"
+#include "plot.h"
 #include <iostream>
 using namespace std;
 
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
     cout << "mGP finished!\n";
     cout << "Final HPWL: " << int(placedb->calcHPWL()) << endl;
     cout << "mGP time: " << mGPTime << endl;
-    placedb->plotCurrentPlacement("mGP result");
+    PLOTTING::plotCurrentPlacement("mGP result", placedb);
 
     ///////////////////////////////////////////////////
     // legalization and detailed placement
@@ -117,7 +118,7 @@ int main(int argc, char *argv[])
         macroLegalizer->legalization();
         time_end(&mLGTime);
 
-        placedb->plotCurrentPlacement("mLG result");
+        PLOTTING::plotCurrentPlacement("mLG result", placedb);
         cout << "HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
         cout << "mLG time: " << mLGTime << endl;
         // exit(0);
@@ -132,7 +133,7 @@ int main(int argc, char *argv[])
 
             cout << "filler placement finished!\n";
             cout << "FILLERONLY time: " << mGPTime << endl;
-            placedb->plotCurrentPlacement("FILLERONLY result");
+            PLOTTING::plotCurrentPlacement("FILLERONLY result", placedb);
 
             eplacer->switch2cGP();
 
@@ -143,10 +144,10 @@ int main(int argc, char *argv[])
             cout << "cGP finished!\n";
             cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
             cout << "cGP time: " << mGPTime << endl;
-            placedb->plotCurrentPlacement("cGP result");
+            PLOTTING::plotCurrentPlacement("cGP result", placedb);
         }
     }
-    
+
     cout << "Output bookshelf:\n";
     placedb->outputBookShelf();
 
@@ -180,6 +181,6 @@ int main(int argc, char *argv[])
         legalizer->legalization();
         cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
         placedb->outputBookShelf();
-        placedb->plotCurrentPlacement("Cell legalized result");
+        PLOTTING::plotCurrentPlacement("Cell legalized result", placedb);
     }
 }

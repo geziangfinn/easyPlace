@@ -6,6 +6,7 @@
 #include <unsupported/Eigen/IterativeSolvers>
 #include "global.h"
 #include "placedb.h"
+#include "plot.h"
 #include "arghandler.h"
 
 using Eigen::VectorXf;
