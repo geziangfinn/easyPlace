@@ -338,6 +338,172 @@ void PlaceDB::moveNodesCenterToCenter()
     }
 }
 
+void PlaceDB::removeBlockedSite() // update intervals
+{
+    //! ignore terminals that are outside the core region
+    //! overlap between macros should be eliminated first! (macro legalization)
+
+    // 1. count all terminal and macros
+    vector<CRect> obstacles;
+    obstacles.clear();
+    for (Module *curTerminal : dbTerminals)
+    {
+        if (float_greater(coreRegion.ur.y, curTerminal->getLL_2D().y) && float_less(coreRegion.ll.y, curTerminal->getUR_2D().y)) // overlap in y direction
+        {
+            if (float_greater(coreRegion.ur.x, curTerminal->getLL_2D().x) && float_less(coreRegion.ll.x, curTerminal->getUR_2D().x)) // overlap in x direction
+            {
+                CRect newObstacle;
+                newObstacle.ll = curTerminal->getLL_2D();
+                newObstacle.ur = curTerminal->getUR_2D();
+                obstacles.push_back(newObstacle);
+            }
+        }
+    }
+
+    for (Module *curNode : dbNodes)
+    {
+        if (curNode->isMacro)
+        {
+            CRect newObstacle;
+            newObstacle.ll = curNode->getLL_2D();
+            newObstacle.ur = curNode->getUR_2D();
+            obstacles.push_back(newObstacle);
+        }
+    }
+    //! sort obstacles by x coordinate first
+    sort(obstacles.begin(), obstacles.end(), [=](CRect a, CRect b)
+         {
+            if (!float_equal(a.ll.x , b.ll.x))
+            {
+                return float_less(a.ll.x ,b.ll.x);
+                
+            }
+            else if (!float_equal(a.ll.y , b.ll.y))
+            {
+                return float_less(a.ll.y ,b.ll.y);
+            }
+            else
+            {
+                // terminals/macros overlap!!
+                cerr<<"TERMINALS/MACROS OVERLAP!\n";
+                exit(0);
+            } });
+
+    // 2. remove blocked sites and update intervals
+    double siteStep = dbSiteRows.front().step; //! assume step for all rows are identical! so it's ok to use front()
+
+    for (CRect curObstacle : obstacles)
+    {
+        vector<SiteRow>::iterator iteBeginRow, iteEndRow;
+        // find the begin row and the end row (of all rows that are blocked by curObstacle)
+        //!!!! important assumption here: dbSiteRows is sorted by bottom coordinate in an increasing order!
+        for (iteBeginRow = dbSiteRows.begin(); iteBeginRow < dbSiteRows.end(); iteBeginRow++)
+        {
+            if (iteBeginRow->bottom + iteBeginRow->height > curObstacle.ll.y)
+            {
+                break;
+            }
+        }
+
+        for (iteEndRow = iteBeginRow; iteEndRow < dbSiteRows.end(); iteEndRow++)
+        {
+            if (iteEndRow->bottom + iteEndRow->height >= curObstacle.ur.y)
+            {
+                break;
+            }
+        }
+
+        if (iteEndRow == dbSiteRows.end())
+        {
+            iteEndRow--;
+        }
+        assert(iteBeginRow != dbSiteRows.end());
+
+        Interval tempInterval;
+
+        for (vector<SiteRow>::iterator curRow = iteBeginRow; curRow <= iteEndRow; curRow++)
+        {
+            for (int i = 0; i < (signed)curRow->intervals.size(); i++)
+            {
+                tempInterval = curRow->intervals[i];
+
+                if (tempInterval.start >= curObstacle.ur.x || tempInterval.end <= curObstacle.ll.x) // screen unnecessary checks
+                {
+                    continue;
+                }
+
+                if (tempInterval.start >= curObstacle.ll.x && tempInterval.end <= curObstacle.ur.x) // fully blocked
+                {
+                    //    ---
+                    // MMMMMMMMM
+                    curRow->intervals.erase(vector<Interval>::iterator(&(curRow->intervals[i])));
+                }
+                else if (tempInterval.end > curObstacle.ur.x && tempInterval.start >= curObstacle.ll.x)
+                {
+                    // ------      -----
+                    // MMM      MMMMM
+                    curRow->intervals[i].start = curObstacle.ur.x;
+                }
+                else if (tempInterval.start < curObstacle.ll.x && tempInterval.end <= curObstacle.ur.x)
+                {
+                    // ---------       -----
+                    //     MMMMM          MMMMM
+                    curRow->intervals[i].end = curObstacle.ll.x;
+                }
+                else if (tempInterval.start < curObstacle.ll.x && tempInterval.end > curObstacle.ur.x)
+                {
+                    // -----------
+                    //    MMMM
+                    curRow->intervals[i].end = curObstacle.ll.x;
+                    curRow->intervals.insert(vector<Interval>::iterator(&(curRow->intervals[i + 1])), Interval(curObstacle.ur.x, tempInterval.end));
+                }
+                else
+                {
+                    printf("Warning: Module Romoving Error\n");
+                    // exit(-1);
+                }
+            }
+        }
+    }
+    
+    //! 3. align intervals to sites after updating intervals, see ntuplace: FixFreeSiteBySiteStep(). Here we need to update the end and start of a site row, so end.x-start.x is an positive integer multiple of site step(site width)
+    for (auto curRowIter = dbSiteRows.begin(); curRowIter != dbSiteRows.end(); curRowIter++)
+    {
+        //? should start.x and end.x be integers too??? check ntuplace
+
+        for (auto curIntervalIter = curRowIter->intervals.begin(); curIntervalIter != curRowIter->intervals.end();)
+        {
+            double intervalWidth = curIntervalIter->end - curIntervalIter->start;
+            // subRowWidth might be less than 0 when:
+            //    ------
+            //   OOOOO
+            if (float_less(intervalWidth, siteStep)) // assume iter->step > 0!
+            {
+                curIntervalIter = curRowIter->intervals.erase(curIntervalIter);
+            }
+            else
+            {
+                double newLeft = ceil((curIntervalIter->start - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
+                double newRight = floor((curIntervalIter->end - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
+                double newIntervalWidth = newRight - newLeft;
+                assert(newIntervalWidth >= siteStep);
+                if (float_greater(newIntervalWidth, 0.0))
+                {
+                    curIntervalIter->start = newLeft;
+                    curIntervalIter->end = newRight;
+                }
+                else if (float_less(newIntervalWidth, 0.0))
+                {
+                    // newIntervalWidth should >= 0.0
+                    cerr << "sub row new width < 0 when it should not\n";
+                    exit(0);
+                }
+                curIntervalIter++;
+            }
+        }
+    }
+}
+
 void PlaceDB::setChipRegion_2D()
 {
     chipRegion = coreRegion;

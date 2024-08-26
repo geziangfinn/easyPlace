@@ -121,7 +121,7 @@ public:
     }
     PlaceDB *placeDB;
     vector<AbacusRow> subrows;  // generated from dbSiteRows and Terminals, this is actually used during legalization
-    vector<Obstacle> obstacles; // include macro and terminals, macros should be legalized first!
+    vector<Obstacle> obstacles; // include macro and terminals, macros should be legalized first! this vector is used to obtain subrows, not necessary if we switch to initialize intervals for subrows in a member function of placedb 
     vector<Module *> dbCells;   // all std cells, sorted by x coordinate(non decreasing order)
     void legalization();
 
@@ -130,8 +130,11 @@ private:
     // follow the abacus paper
     void initialization();
     void initializeCells();
-    void initializeObstacles(); // obstacles include macros and terminals, macros should be legalized first!
+    void initializeObstacles(); // obstacles include macros and terminals, macros should be legalized first! 2024.08.26: this function is abandoned, and is integrated into removeBlockSites() in placedb.cpp
     void initializeSubrows();
+
+    void initializeSubrowsOld();// abandoned
+
     double placeRow(Module *, int, bool);
 };
 
