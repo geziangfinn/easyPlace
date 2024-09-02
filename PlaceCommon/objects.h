@@ -319,6 +319,10 @@ public:
     {
         start = end = 0.0; //!! 0.0!!!!
     }
+    float getLength()
+    {
+        return start - end;
+    }
     float start;
     float end;
 };

@@ -10,6 +10,8 @@
 #include <cmath>
 #include <algorithm>
 #include <map>
+#include <list>
+#include <limits.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <iomanip>

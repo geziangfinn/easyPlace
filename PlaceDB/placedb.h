@@ -91,6 +91,9 @@ public:
     void outputNets();
     void outputSCL();
 
+    int y2RowIndex(float);
+    bool isConnected(Module*,Module*);
+
     // void plotCurrentPlacement(string);
 };
 #endif

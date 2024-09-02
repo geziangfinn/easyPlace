@@ -465,7 +465,7 @@ void PlaceDB::removeBlockedSite() // update intervals
             }
         }
     }
-    
+
     //! 3. align intervals to sites after updating intervals, see ntuplace: FixFreeSiteBySiteStep(). Here we need to update the end and start of a site row, so end.x-start.x is an positive integer multiple of site step(site width)
     for (auto curRowIter = dbSiteRows.begin(); curRowIter != dbSiteRows.end(); curRowIter++)
     {
@@ -956,4 +956,29 @@ void PlaceDB::addNoise()
         pos.y += disy(gen);
         node->setCenter_2D(pos.x, pos.y);
     }
+}
+
+int PlaceDB::y2RowIndex(float y)
+{
+    int index = (int)((y - coreRegion.ll.y) / commonRowHeight); //!!!!!!! assume coreRegion.ll.y == the bottom of the first row, check setCoreRegion()
+
+    assert(index >= 0);
+    assert(index < dbSiteRows.size());
+
+    return index;
+}
+
+bool PlaceDB::isConnected(Module *module1, Module *module2)
+{
+    for (Net *module1Net : module1->nets)
+    {
+        for (Net *module2Net : module2->nets)
+        {
+            if(module1Net==module2Net)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }
