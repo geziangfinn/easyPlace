@@ -2,180 +2,93 @@
 void DetailedPlacer::detailedPlacement()
 {
     runISM();
-    runGlobalSwap();
-    runLocalReordering();
+    // runGlobalSwap();
+    // runLocalReordering();
 }
 void DetailedPlacer::runISM()
 {
+    double totalTime;
+    time_start(&totalTime);
+
+    double initialHPWL = placedb->calcHPWL();
+
+    double detailTimeStart = seconds();
+
+    double totalDetailTime = 0;
+    cout << "\nRunning ISM for detailed palcement...\n";
+    flush(cout);
+
+    // placedb.SaveBlockLocation();
+
     ISMDP *ismDetailedPlacer = new ISMDP(placedb);
     ismDetailedPlacer->initialization();
-    
-    double total_time=seconds();
-	placedb.CalcHPWL();
-	double wl1=placedb.GetHPWLp2p();
-	double detail_time_start = seconds();
-	double wl3 = 0;
-	double total_detail_time = 0;
-	double part_time_start; 
-		//by tellux
-		//cout << "\nDeatiled placement... (max time: " << param.de_time_constrain << " sec)\n";
-		cout << "\nRunning ISM detailed placement... (" << ite << ", " << indIte << ")\n";
-		flush( cout );
-		placedb.CalcHPWL();
-		wl3 = placedb.GetHPWLp2p();
+    ismDetailedPlacer->independentCells = false;
 
-		placedb.SaveBlockLocation();
+    double previousHPWL = initialHPWL;
+    double stop = -0.2; // adjustable parameter
+    // assert(stop < 0);
+    int index = 0;
 
-		//double totdetime = clock();
-		de_Detail de(placedb);// de_Detail called here!!
-		de.pIndepent = false;
+    totalDetailTime = seconds() - detailTimeStart;
 
-		//FILE* out_detail_log;
-		//out_detail_log = fopen( "log_detail.txt", "a" );
-		//fprintf( out_detail_log ,"\n===== %s ====" , argv[1]);
+    double accumulatedTimeStart = seconds(); // donnie 2006-03-13
 
-		total_detail_time = seconds() - detail_time_start;
-		int i=0;
-		double preWL=wl3;
-		double preWL2=wl3;
-		double preWL3=wl3;
-		de.pIndepent=false;
-		double all_time_start = seconds(); // donnie 2006-03-13
-		
-		
-		//double stop = -0.2; // donnie
-		//double stop = -param.cellMatchingStop; // donnie 2006-04-01
-		
-		// 2006-09-30 (donnie)
-		double stop = -m_stop;
-		assert( stop < 0 );
+    while (totalDetailTime < 28800) // 28800= 8 hours, adjustable
+    {
+        // placedb.SaveBlockLocation();
+        double oneIteTimeStart = seconds();
 
-		while( total_detail_time < param.de_time_constrain )
-		{
-			placedb.SaveBlockLocation();
-			part_time_start = seconds();
+        // de.MAXWINDOW = param.de_MW; // MAXWINDOW reset here!
+        // de.MAXMODULE = param.de_MM;
 
+        // int run_para1 = param.de_window - i; // de_window = 20, this is window size
+        int windowSize = 20 - index; // todo: switch to adjustable window size instead of a fixed number (20 for now)
+        if (windowSize < 15)
+        {
+            windowSize = 15 + index % 5;
+        }
 
-			de.MAXWINDOW = param.de_MW;
-			de.MAXMODULE = param.de_MM;
-			int run_para1 = param.de_window-i;// de_window = 20, this is window size 
-			if(run_para1<15)
-				run_para1=15+i%5;
+        int windowOverlap = 2 + (int)(index / 2);
+        if (windowOverlap > 8)
+        {
+            windowOverlap = 8;
+        }
+        // cout << windowSize << " " << windowOverlap << endl;
+        ismDetailedPlacer->ISMSweep(windowSize, windowOverlap);
+        double currentHPWL = placedb->calcHPWL();
+        // double wlx = placedb.GetHPWLp2p();
+        double oneIteTime = double(seconds() - oneIteTimeStart);
+        double accumulatedTime = seconds() - accumulatedTimeStart;
 
-			int run_para2=2+(int)(i/2);
-			if(run_para2>8)
-				run_para2=8;
+        printf(" iteration:%2d HPWL=%.0f (%.3f%%)(%.3f%%)   time: %d sec   all: %d sec\n",
+               index, currentHPWL, 100.0 * (currentHPWL / previousHPWL - 1.0), 100.0 * (currentHPWL / initialHPWL - 1.0),
+               (int)oneIteTime, (int)accumulatedTime);
 
-			de.grid_run(run_para1,run_para2);
-			placedb.CalcHPWL();
-			double wlx = placedb.GetHPWLp2p();				
-			double total_part_timex = double(seconds() - part_time_start);
-			double all_time = seconds() - all_time_start;
+        fflush(stdout);
 
-			printf( " run:%2d HPWL=%.0f (%.3f%%)(%.3f%%)   time: %d sec   all: %d sec\n",
-			     i, placedb.GetHPWLp2p(), 100.0*(wlx/preWL-1.0), 100.0*(wlx/wl3-1.0),
-			    (int)total_part_timex, (int)all_time );
-			fflush( stdout );
-		
-			/*	
-			cout <<"    run:"<<i<<" HPWL= " << placedb.GetHPWLp2p() 
-			    << " (" << 100.0*(wlx/preWL-1.0) << "%)"
-			    << " (" << 100.0*(wlx/wl3-1.0) << "%)  ";
-			double total_part_timex = double(seconds() - part_time_start);
-			double all_time = seconds() - all_time_start;
-			cout<<"\t time: "<< (int)total_part_timex << " sec    all: " << (int)all_time << " sec" << endl;
-			*/
+        if ((100.0 * (currentHPWL / previousHPWL - 1.0)) > stop * 3 && ismDetailedPlacer->independentCells)
+        {
+            break;
+        }
 
-			//fprintf( out_detail_log ,"\n %5.3e , %5.3e , %.2f%% , %4.2fm , MW=%d, MM=%d, Run#=%d, RunP1=%d, RunP2=%d , Inte=%d" 
-			//	,  wl3, wlx, (wlx-wl3)*100/wl1,
-			//	total_part_timex/60, de.MAXWINDOW,de.MAXMODULE,i,run_para1,run_para2,de.pIndepent
-			//	);
+        if ((100.0 * (currentHPWL / previousHPWL - 1.0)) > stop) // by donnie
+        {
+            if (ismDetailedPlacer->doubleWindow == false)
+            {
+                ismDetailedPlacer->doubleWindow = true;
+                ismDetailedPlacer->independentCells = true;
+                cout << "Consider independent cells now\n"; // ! start independent
+            }
+        }
 
-			/*
-			if( i >= ite )
-			{
-			    de.pIndepent = true;
-			    de.pRW = true;
-			}
-
-			if( i >= ite + indIte )
-			    break;
-			*/
-
-			
-			// donnie, change the stop order (2006-03-14)
-			
-			//if((100.0*(wlx/preWL3-1.0))>-0.06 && de.pIndepent )
-			if((100.0*(wlx/preWL-1.0))>stop*3 && de.pIndepent )
-			//if((100.0*(wlx/preWL-1.0))>stop*5 && de.pIndepent )
-			    break;
-
-			/*
-			//if((100.0*(wlx/preWL-1.0))>-0.02)
-			if((100.0*(wlx/preWL-1.0))>stop && de.pRW ) // by donnie
-			{
-			    
-			    break;  // for ispd06
-			    
-			    if(de.pIndepent==false)
-			    {
-				de.pIndepent=true;
-				cout << "  startInd\n";
-			    }
-
-			}
-			*/
-
-			// 2005/3/21 
-			//if((100.0*(wlx/preWL-1.0))>-0.05)
-			if((100.0*(wlx/preWL-1.0)) > stop) // by donnie
-			{
-			    //break;  // for ispd06
-
-			    if(de.pRW==false)
-			    {
-				de.pRW=true;
-				//cout << "  start Double Window \n";
-			
-				// skip double window (donnie) 2006-03-21	
-				de.pIndepent=true;
-				cout << "  startInd\n";// ! start independent
-			    }
-			}
-
-			
-			total_detail_time = seconds() - detail_time_start;
-			i++;
-			preWL3=preWL2;
-			preWL2=preWL;
-			preWL=wlx;
-
-		}
-
-
-		wl3 = placedb.GetHPWLp2p();
-		cout << "DETAILED: Pin-to-pin HPWL= " << placedb.GetHPWLp2p() << " (" << 100.0*(wl3/wl1-1.0) << "%)\n";
-		cout<<" Total runtime:"<<seconds()-total_time<<"\n";
-		//double total_det_time = double(clock() - totdetime)/CLOCKS_PER_SEC;
-		//fprintf( out_detail_log ,"\n=== Finish: %5.3e , %5.3e , %.2f%%, time:%4.1fm ====" 
-		//		,  wl1, wl3, (wl3-wl1)*100/wl1,total_det_time/60 );		
-		//fclose( out_detail_log );
-
-#if 0
-		if( param.bPlot )
-		{
-			string file = param.outFilePrefix + "_detail.plt";
-			placedb.OutputGnuplotFigure( file.c_str(), true );
-			//placedb.OutputGnuplotFigure( "out_legal.plt", false );
-		}
-		//end of tellux
-
-		if( param.bShow )
-		{
-		    string file = param.outFilePrefix + "_detail.pl";
-		    placedb.OutputPL( file.c_str() );
-		}
-#endif
+        totalDetailTime = seconds() - detailTimeStart;
+        index++;
+        previousHPWL = currentHPWL;
+    }
+    time_end(&totalTime);
+    double finalHPWL = placedb->calcHPWL();
+    cout << "ISM result: Pin-to-pin HPWL= " << finalHPWL << " (" << 100.0 * (finalHPWL / initialHPWL - 1.0) << "%)\n";
+    cout << "ISM total runtime:" << totalTime << "\n";
 }
 
 void ISMDP::ISMSweep(int windowSize, int windowOverlap) // a square window, width=height=windowSize
@@ -196,11 +109,13 @@ void ISMDP::ISMSweep(int windowSize, int windowOverlap) // a square window, widt
         for (int j = 0; j < x_num; j = j + windowSize - windowOverlap)
         {
             CRect curWindow;
+
             curWindow.ll.x = placeDB->coreRegion.ll.x + j * placeDB->commonRowHeight;
             curWindow.ll.y = placeDB->coreRegion.ll.y + i * placeDB->commonRowHeight;
             curWindow.ur.x = curWindow.ll.x + windowSize * placeDB->commonRowHeight;
             curWindow.ur.y = curWindow.ll.y + windowSize * placeDB->commonRowHeight;
 
+            // cout << curWindow;
             // ISMRun(fplan->m_coreRgn.left + j * placeDB->commonRowHeight, fplan->m_coreRgn.bottom + i * placeDB->commonRowHeight,
             //        window * placeDB->commonRowHeight, window * placeDB->commonRowHeight);
             ISMRun(curWindow);
@@ -242,6 +157,8 @@ void ISMDP::ISMRun(CRect window)
                 moduleMap.insert(pair<double, Module *>(curModuleIter->second->getWidth(), curModuleIter->second));
             }
         }
+        // ISMRows[i].showModule();
+        // cout << "modulecountcp1: " << moduleMap.size() << endl;
     }
 
     if (doubleWindow == true) // enable double window, pick cells from 2 windows
@@ -402,7 +319,7 @@ void ISMDP::ISMRun(CRect window)
         }
         // Handle whitespace and add extra slots
 
-        if (insertedModuleCount < maxModuleCount)
+        if (insertedModuleCount < maxWindow)
         {
             int emptySlotCount = 0;
             for (int i = startRowIndex; i < endRowIndex; i++)
@@ -423,7 +340,7 @@ void ISMDP::ISMRun(CRect window)
 
                         slots.push_back(slot); //! how was the vector 'position'used?
                         emptySlotCount++;
-                        if (emptySlotCount + insertedModuleCount >= maxModuleCount)
+                        if (emptySlotCount + insertedModuleCount >= maxWindow)
                         {
                             break;
                         }
@@ -470,7 +387,7 @@ void ISMDP::ISMRun(CRect window)
                 for (int j = 0; j < deg; j++)
                 {
                     placeDB->setModuleLocation_2D(modules[i], slots[j].x, slots[j].y);
-                    double wl = placeDB->calcModuleHPWL(modules[i]);
+                    double wl = placeDB->calcModuleHPWLsafe(modules[i]);
                     // cerr<<" "<<wl;
                     // double wl=0;
                     // for(int k=0;k<(int)fplan->m_modules[modules[i]].m_netsId.size();k++)
@@ -508,7 +425,10 @@ void ISMDP::ISMRun(CRect window)
         for (int i = 0; i < deg; i++)
         {
             if (modules[i] == NULL)
+            {
                 break;
+            }
+
             int pos = placeDB->y2RowIndex(slots[result[i]].y);
 
             if (!ISMRows[pos].insertModule(slots[result[i]].x, modules[i])) //!!module reinserted here!!
@@ -539,26 +459,32 @@ void ISMDP::ISMRun(CRect window)
 
 void ISMDP::initialization()
 {
+    // placeDB->removeBlockedSite();
     initializeParams();
     initializeISMRows();
 }
 
 void ISMDP::initializeParams()
 {
-    maxModuleCount = 64;
+    // see ntuplace3, not sure if maxWindow=90, maxModuleCount=128, or maxWindow=maxModuleCount=64
+    maxWindow = 90;
+    maxModuleCount = 128;
 }
 
 void ISMDP::initializeISMRows()
 {
     double ISMRowLength = placeDB->coreRegion.getWidth();
+    cout << "initialize ISM rows: \n";
 
     // 1.create ISMRows
     for (SiteRow curRow : placeDB->dbSiteRows)
     {
-        ISMRow newRow(placeDB->coreRegion.ll.x, curRow.bottom, ISMRowLength); //? length equals to the chip length? why?
-        for (Interval curInterval : curRow.intervals)                         // j=j+2: see the explanatio of m_interval
+        ISMRow newRow(placeDB->coreRegion.ll.x, curRow.bottom, ISMRowLength);
+        for (Interval curInterval : curRow.intervals)
         {
+            // cout<<"father: "<<curInterval.start<<" "<<curInterval.getLength()<<endl;
             newRow.rowSpaces[curInterval.start] = curInterval.getLength();
+            // cout<<"son: "<<newRow.rowSpaces[curInterval.start]<<endl;
         }
         ISMRows.push_back(newRow);
     }
@@ -586,6 +512,14 @@ void ISMDP::initializeISMRows()
             ISMRows[pos + i].insertModule(curModulePos.x, curModule);
         }
     }
+
+    // placeDB->showRows();
+
+    // for (ISMRow curRow : ISMRows)
+    // {
+    //     curRow.showSpace();
+    //     curRow.showModule();
+    // }
 }
 
 bool ISMRow::insertModule(double x, Module *curModule)
@@ -598,6 +532,7 @@ bool ISMRow::insertModule(double x, Module *curModule)
     auto rowSpaceIter = rowSpaces.upper_bound(moduleX);
     if (rowSpaceIter == rowSpaces.begin())
     {
+        // cout<<"wtf?\n";
         return false; // x<all empty site's start point, shouldn't happen for a legalized placement?
     }
     else
@@ -605,6 +540,7 @@ bool ISMRow::insertModule(double x, Module *curModule)
         --rowSpaceIter; // upper_bound returns the first element greater than key
         if ((rowSpaceIter->second - (moduleX - rowSpaceIter->first)) < moduleWidth)
         {
+            // cout<<rowSpaceIter->second<<" "<<moduleX<<" "<<rowSpaceIter->first<<" "<<moduleWidth<<endl;
             return false; // space can't contain this cell
         }
         else
@@ -628,6 +564,7 @@ bool ISMRow::insertModule(double x, Module *curModule)
                 rowSpaceIter->second = l2; // update length of space, which is l2.
             }
             rowModules[moduleX] = curModule;
+            // cout<<"inserted\n"<<curModule->idx<<endl;
             return true;
         }
     }
@@ -765,6 +702,31 @@ bool ISMRow::insertSpace(double x, double width)
         rowSpaces.erase(spaceBehindX);
     }
     return true;
+}
+
+void ISMRow::showSpace()
+{
+    cout << "\n=====ISM ROW SPACE ===\n";
+
+    for (auto iter = rowSpaces.begin(); iter != rowSpaces.end(); iter++)
+    {
+        // modified by Jin 20070727
+        printf("[%.10f,%.10f] ", iter->first, iter->second);
+        // cout<<" ["<<iter->first<<","<<iter->second<<"] ";
+        // modified by Jin 20070727
+    }
+    cout << '\n';
+}
+
+void ISMRow::showModule()
+{
+    cout << "\n=====ISM ROW Module ===\n";
+
+    for (auto iter = rowModules.begin(); iter != rowModules.end(); iter++)
+    {
+        cout << " [" << iter->first << "," << iter->second->idx << "] ";
+    }
+    cout << '\n';
 }
 
 int lap2::lapSolve()

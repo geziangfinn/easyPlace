@@ -54,16 +54,18 @@ public:
     }
     void initialization();
     void ISMSweep(int, int); // int windowSize, int windowOverlap
-    void ISMRun(CRect);
+
     PlaceDB *placeDB;
     vector<ISMRow> ISMRows;
-    int maxModuleCount; // max number of modules in ISM window(s) (not one ISMRun())
+    int maxWindow; // see ntuplace class de_Detail.MAXWINDOW
+    int maxModuleCount; // max number of modules in ISM window(s) (not one ISMRun()), see ntuplace class de_Detail.MAXMODULE
     bool doubleWindow;
     bool independentCells;
 
 private:
     void initializeParams();
     void initializeISMRows();
+    void ISMRun(CRect);
 };
 
 class ISMRow
@@ -90,6 +92,9 @@ public:
     void removeModule(Module *);
     bool removeTail(double, double);  // double: x coordiante, double: width, see ntuplace, detail.cpp, remove_empty()
     bool insertSpace(double, double); // double: x coordiante, double: width, see ntuplace, detail.cpp add_empty()
+
+    void showSpace();
+    void showModule();
 
     POS_2D ll; // ll: lower left
     double length;

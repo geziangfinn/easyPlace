@@ -5,6 +5,7 @@
 #include "opt.hpp"
 #include "nesterov.hpp"
 #include "legalizer.h"
+#include "detailed.h"
 #include "plot.h"
 #include <iostream>
 using namespace std;
@@ -148,9 +149,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    cout << "Output bookshelf:\n";
-    placedb->outputBookShelf();
-
     if (gArg.CheckExist("noLegal"))
     {
         return;
@@ -159,6 +157,9 @@ int main(int argc, char *argv[])
     string legalizerPath;
     if (gArg.GetString("legalizerPath", &legalizerPath))
     {
+        cout << "Output bookshelf:\n";
+        placedb->outputBookShelf();
+        
         string outputAUXPath;
         string outputPLPath;
         string outputPath;
@@ -177,10 +178,17 @@ int main(int argc, char *argv[])
         // for std cell design only, since we don't have macro legalizer for now
         cout << "Calling internal legalizer: " << endl;
         cout << "Global HPWL: " << int(placedb->calcHPWL()) << endl;
+
         AbacusLegalizer *legalizer = new AbacusLegalizer(placedb);
         legalizer->legalization();
         cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
-        placedb->outputBookShelf();
         PLOTTING::plotCurrentPlacement("Cell legalized result", placedb);
+
+        DetailedPlacer *detailedPlacer = new DetailedPlacer(placedb);
+        detailedPlacer->detailedPlacement();
+        cout << "Detailed HPWL: " << int(placedb->calcHPWL()) << endl;
+        PLOTTING::plotCurrentPlacement("Detailed placement result", placedb);
+
+        placedb->outputBookShelf();
     }
 }

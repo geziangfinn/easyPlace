@@ -1000,7 +1000,7 @@ int SAMacroLegalizer::getMacroOverlapArea(Module *curMacro)
 
 float SAMacroLegalizer::getMacroCost(Module *curMacro, float &HPWL, float &cellCovered, float &macroOverlap)
 {
-    HPWL = placeDB->calcModuleHPWL(curMacro);
+    HPWL = placeDB->calcModuleHPWLunsafe(curMacro);
     cellCovered = getCellAreaCoveredByMacro(curMacro);
     macroOverlap = getMacroOverlapArea(curMacro);
     return HPWL + cellCovered * miuD + macroOverlap * miuO;

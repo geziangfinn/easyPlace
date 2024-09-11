@@ -321,7 +321,7 @@ public:
     }
     float getLength()
     {
-        return start - end;
+        return end - start;
     }
     float start;
     float end;

@@ -20,6 +20,7 @@ public:
         coreRegion = CRect();
         chipRegion = CRect();
         totalRowArea = 0;
+        nodesLocationRegister.clear();
     };
     int layerCount;  // how many layers? this is for 3dic
     int moduleCount; // number of modules
@@ -42,6 +43,8 @@ public:
 
     map<string, Module *> moduleMap; // map module name to module pointer(module include nodes and terminals)
 
+    vector<POS_3D> nodesLocationRegister;
+
     void setCoreRegion();
     void init_tiers();
 
@@ -58,6 +61,7 @@ public:
     Module *getModuleFromName(string);
 
     void setModuleLocation_2D(Module *, float, float);
+    void setModuleLocation_2D(Module *, POS_3D);
     void setModuleCenter_2D(Module *, float, float);
     void setModuleCenter_2D(Module *, POS_3D);
     void setModuleCenter_2D(Module *, VECTOR_3D);
@@ -67,6 +71,8 @@ public:
     void moveModule_2D(Module *, VECTOR_2D_INT);
     void randomPlacment();
     void addNoise();
+    void saveNodesLocation();
+    void loadNodesLocation();
 
     POS_3D getValidModuleCenter_2D(Module *module, float x, float y);
 
@@ -74,7 +80,8 @@ public:
     double calcWA_Wirelength_2D(VECTOR_2D);
     double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
-    double calcModuleHPWL(Module *);
+    double calcModuleHPWLunsafe(Module *);
+    double calcModuleHPWLsafe(Module *);
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 
@@ -83,6 +90,7 @@ public:
     void setChipRegion_2D();
 
     void showDBInfo();
+    void showRows();
 
     void outputBookShelf();
     void outputAUX();
