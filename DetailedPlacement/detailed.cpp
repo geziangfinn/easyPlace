@@ -1,16 +1,27 @@
 #include "detailed.h"
 void DetailedPlacer::detailedPlacement()
 {
+    initialization();
     runISM();
     // runGlobalSwap();
     // runLocalReordering();
 }
+void DetailedPlacer::initialization()
+{
+    placedb->removeBlockedSite(); // intervals updated for detailed placement here
+}
 void DetailedPlacer::runISM()
 {
+    ISMDP *ismDetailedPlacer = new ISMDP(placedb);
+    ismDetailedPlacer->initialization();
+    // ismDetailedPlacer->independentCells = false;
+
     double totalTime;
     time_start(&totalTime);
 
     double initialHPWL = placedb->calcHPWL();
+
+    double previousHPWL = initialHPWL;
 
     double detailTimeStart = seconds();
 
@@ -20,20 +31,18 @@ void DetailedPlacer::runISM()
 
     // placedb.SaveBlockLocation();
 
-    ISMDP *ismDetailedPlacer = new ISMDP(placedb);
-    ismDetailedPlacer->initialization();
-    ismDetailedPlacer->independentCells = false;
-
-    double previousHPWL = initialHPWL;
-    double stop = -0.2; // adjustable parameter
+    // the following are 3 adjustable parameters
+    double timeLimit = 28800; // 28800= 8 hours, adjustable
+    double stop = -0.2;       // adjustable parameter
+    double windowSize = 20;   // in row height, adjustable, (20x row height for now)
     // assert(stop < 0);
-    int index = 0;
 
     totalDetailTime = seconds() - detailTimeStart;
 
     double accumulatedTimeStart = seconds(); // donnie 2006-03-13
 
-    while (totalDetailTime < 28800) // 28800= 8 hours, adjustable
+    int index = 0;
+    while (totalDetailTime < timeLimit)
     {
         // placedb.SaveBlockLocation();
         double oneIteTimeStart = seconds();
@@ -42,7 +51,7 @@ void DetailedPlacer::runISM()
         // de.MAXMODULE = param.de_MM;
 
         // int run_para1 = param.de_window - i; // de_window = 20, this is window size
-        int windowSize = 20 - index; // todo: switch to adjustable window size instead of a fixed number (20 for now)
+        int windowSize = windowSize - index;
         if (windowSize < 15)
         {
             windowSize = 15 + index % 5;
@@ -54,7 +63,9 @@ void DetailedPlacer::runISM()
             windowOverlap = 8;
         }
         // cout << windowSize << " " << windowOverlap << endl;
+
         ismDetailedPlacer->ISMSweep(windowSize, windowOverlap);
+
         double currentHPWL = placedb->calcHPWL();
         // double wlx = placedb.GetHPWLp2p();
         double oneIteTime = double(seconds() - oneIteTimeStart);
@@ -89,6 +100,12 @@ void DetailedPlacer::runISM()
     double finalHPWL = placedb->calcHPWL();
     cout << "ISM result: Pin-to-pin HPWL= " << finalHPWL << " (" << 100.0 * (finalHPWL / initialHPWL - 1.0) << "%)\n";
     cout << "ISM total runtime:" << totalTime << "\n";
+}
+
+void DetailedPlacer::runLocalReordering()
+{
+    LocalReorderingDP *lrDetailedPlacer = new LocalReorderingDP(placedb);
+    lrDetailedPlacer->initialization();
 }
 
 void ISMDP::ISMSweep(int windowSize, int windowOverlap) // a square window, width=height=windowSize
@@ -152,8 +169,9 @@ void ISMDP::ISMRun(CRect window)
 
         for (auto curModuleIter = startModule; curModuleIter != endModule; curModuleIter++)
         {
-            if (curModuleIter->second->getHeight() == placeDB->commonRowHeight) // macros are ignored
-            {                                                                   //! adding all cells in the window
+            // if (curModuleIter->second->getHeight() == placeDB->commonRowHeight)
+            if (!(curModuleIter->second->isMacro)) // macros are ignored
+            {                                      //! adding all cells in the window
                 moduleMap.insert(pair<double, Module *>(curModuleIter->second->getWidth(), curModuleIter->second));
             }
         }
@@ -171,7 +189,8 @@ void ISMDP::ISMRun(CRect window)
             auto endModule = ISMRows[i].rowModules.lower_bound(window.ur.x + 6 * window.getWidth());   //??
             for (auto curModuleIter = startModule; curModuleIter != endModule; curModuleIter++)
             {
-                if (curModuleIter->second->getHeight() == placeDB->commonRowHeight) // don't consider macros
+                // if (curModuleIter->second->getHeight() == placeDB->commonRowHeight)
+                if (!(curModuleIter->second->isMacro)) // macros are ignored
                 {
                     moduleMap.insert(pair<double, Module *>(curModuleIter->second->getWidth(), curModuleIter->second));
                 }
@@ -467,6 +486,8 @@ void ISMDP::initialization()
 void ISMDP::initializeParams()
 {
     // see ntuplace3, not sure if maxWindow=90, maxModuleCount=128, or maxWindow=maxModuleCount=64
+    doubleWindow = false;
+    independentCells = false;
     maxWindow = 90;
     maxModuleCount = 128;
 }
@@ -992,4 +1013,78 @@ int lap2::lapSolve()
     //  this->assignment=assignment;
 
     return lapcost;
+}
+
+void LocalReorderingDP::initialization()
+{
+    initializeSegments();
+}
+
+void LocalReorderingDP::solve()
+{
+    
+}
+
+void LocalReorderingDP::initializeSegments()
+{
+    //! 1. create segments from intervals
+    for (SiteRow curRow : placeDB->dbSiteRows)
+    {
+        for (Interval curInterval : curRow.intervals)
+        {
+            lrSegments.push_back(LRSegment(curRow.bottom, curInterval.start, curInterval.end));
+        }
+    }
+
+    //! 2. add modules to segments
+    //  printf("Init BB...");
+    fflush(stdout);
+
+    // Add all non-Macro modules into segments
+    for (Module *curModule : placeDB->dbNodes)
+    {
+        if (curModule->isMacro) // Skip Macro modules
+        {
+            continue;
+        }
+        POS_2D curModulePos = curModule->getLL_2D();
+
+        // Find the corresponding segment of this module, and insert the module id into the segment
+        LRSegment compSeg(curModulePos.y, curModulePos.x, curModulePos.x + curModule->getWidth());
+        auto iteFindSegment = lower_bound(lrSegments.begin(), lrSegments.end(), compSeg, compareLRSegment());//!!!! potential bug
+        if (iteFindSegment != lrSegments.end() && iteFindSegment->bottom == curModulePos.y)
+        {
+            iteFindSegment->addModule(curModule);
+        }
+        else
+        {
+            fprintf(stderr, "Warning: InitFroBBCellSwap(), cannot find legal segment for "
+                            "module '%s' at (%.2f, %.2f) w: %.2f h: %.2f\n",
+                    curModule->name.c_str(),
+                    curModulePos.x, curModulePos.y, curModule->getWidth(), curModule->getHeight());
+            if (iteFindSegment != lrSegments.end())
+            {
+                fprintf(stderr, "   iteFindSegment  : bottom %.2f left: %.2f right: %.2f\n", iteFindSegment->bottom, iteFindSegment->start, iteFindSegment->end);
+                fprintf(stderr, "   iteFindSegment-1: bottom %.2f left: %.2f right: %.2f\n", (iteFindSegment - 1)->bottom, (iteFindSegment - 1)->start, (iteFindSegment - 1)->end);
+            }
+        }
+
+        // Warning: this module is not on any segments
+        if (iteFindSegment == lrSegments.end())
+        {
+            cerr << "Warning: Module " << curModule->idx << " is not on any segments" << endl;
+        }
+    }
+
+    // printf( "..s.." );
+    fflush(stdout);
+    // Sort the module id's by their x coordinates (increasingly)
+    for (auto iteSegment = lrSegments.begin(); iteSegment != lrSegments.end(); iteSegment++)//!! potential bug regarding the lambda expression for comparing Module*
+    {
+        sort(iteSegment->segModules.begin(), iteSegment->segModules.end(), [=](Module *a, Module *b)
+             { return float_less(a->getLL_2D().x, b->getLL_2D().x); });
+    }
+
+    // printf("done\n");
+    fflush(stdout);
 }

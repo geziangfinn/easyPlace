@@ -5,6 +5,7 @@
 class ISMDP;
 class ISMRow;
 class LocalReorderingDP;
+class LRSegment;
 class GlobalSwapDP;
 
 class DetailedPlacer
@@ -27,6 +28,7 @@ public:
     void detailedPlacement();
 
 private:
+    void initialization();
     void runISM();
     void runGlobalSwap();
     void runLocalReordering(); // branch and bound cell swap = local reordering
@@ -57,7 +59,7 @@ public:
 
     PlaceDB *placeDB;
     vector<ISMRow> ISMRows;
-    int maxWindow; // see ntuplace class de_Detail.MAXWINDOW
+    int maxWindow;      // see ntuplace class de_Detail.MAXWINDOW
     int maxModuleCount; // max number of modules in ISM window(s) (not one ISMRun()), see ntuplace class de_Detail.MAXMODULE
     bool doubleWindow;
     bool independentCells;
@@ -138,9 +140,86 @@ public:
     bool verbose;
 };
 
-class LocalReorderingDP
+class LocalReorderingDP // local reorder == bb cell swap
 {
+public:
+    LocalReorderingDP()
+    {
+        Init();
+    }
+    LocalReorderingDP(PlaceDB *_db)
+    {
+        Init();
+        placeDB = _db;
+    }
+    void Init()
+    {
+        placeDB = NULL;
+        lrSegments.clear();
+    }
+    PlaceDB *placeDB;
+    vector<LRSegment> lrSegments;
+    void initialization();
+    void solve();
+
+private:
+    void initializeSegments();
 };
+
+class LRSegment // The placeable interval in each row is called a segment, pretty much like an abacus row. Initialized with placedb->dbSiteRows.intervals
+{               // LR:local reordering
+public:
+    LRSegment()
+    {
+        Init();
+    }
+    LRSegment(double _bottom, double _start, double _end)
+    {
+        Init();
+        bottom = _bottom;
+        start = _start;
+        end = _end;
+    }
+    void Init()
+    {
+        bottom = -1;
+        start = -1;
+        end = -1;
+        segModules.clear();
+    }
+
+    double bottom;               // The bottom y coordinate of this row of sites
+    double start, end;           // The left and right coordinates of this row of sites
+    vector<Module *> segModules; // Record the  modules on this segment
+    void addModule(Module *module)
+    {
+        segModules.push_back(module);
+    }
+};
+
+class compareLRSegment
+{
+public:
+    bool operator()(const LRSegment &s, const LRSegment &compSeg)
+    {
+        if (s.bottom == compSeg.bottom)
+        {
+            if (s.start <= compSeg.start)
+            {
+                return s.end < compSeg.end;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return s.bottom < compSeg.bottom;
+        }
+    }
+};
+
 class GlobalSwapDP
 {
 };
