@@ -295,6 +295,16 @@ double PlaceDB::calcNetBoundPins()
     return HPWL;
 }
 
+double PlaceDB::calcModuleHPWL(Module *curModule)//! assume there are no 2 pins in one module belong to a same net
+{
+    double HPWL = 0;
+    for (Net *curNet : curModule->nets)
+    {
+        HPWL += curNet->calcNetHPWL();
+    }
+    return HPWL;
+}
+
 double PlaceDB::calcModuleHPWLunsafe(Module *curModule)
 {
     //!!!!this function is dangerous and is used for accelerating macro legalization only

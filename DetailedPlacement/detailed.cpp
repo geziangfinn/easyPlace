@@ -1020,9 +1020,67 @@ void LocalReorderingDP::initialization()
     initializeSegments();
 }
 
-void LocalReorderingDP::solve()
+void LocalReorderingDP::solve(int windowSize, int overlapSize, int iterationNumber)
 {
-    
+    for (int i = 0; i < iterationNumber; i++)
+    {
+        for (auto curLRSegment = lrSegments.begin(); curLRSegment != lrSegments.end(); curLRSegment++)
+        {
+            // 1. No cells in this segment
+            if (curLRSegment->segModules.size() < 1)
+            {
+                continue;
+            }
+
+            // 2. Only one cell in this segment: check the solution packing the cell to the left or right
+            else if (curLRSegment->segModules.size() == 1)
+            {
+                Module *onlyModule = curLRSegment->segModules.front();
+                POS_2D modulePos = onlyModule->getLL_2D();
+
+                double originalX = modulePos.x;
+                double originalWirelength = placeDB->calcModuleHPWL(onlyModule);
+
+                double leftX = curLRSegment->start;
+                placeDB->setModuleLocation_2D(onlyModule, leftX, modulePos.y);
+                double leftWirelength = placeDB->calcModuleHPWL(onlyModule);
+
+                double rightX = curLRSegment->end - onlyModule->getWidth();
+                placeDB->setModuleLocation_2D(onlyModule, rightX, modulePos.y);
+                double rightWirelength = placeDB->calcModuleHPWL(onlyModule);
+
+                // OrigW is the smallest
+                if (originalWirelength <= leftWirelength && originalWirelength <= rightWirelength)
+                {
+                    placeDB->setModuleLocation_2D(onlyModule, originalX, modulePos.y);
+                }
+                // leftW is the smallest
+                else if (leftWirelength <= originalWirelength && leftWirelength <= rightWirelength)
+                {
+                    placeDB->setModuleLocation_2D(onlyModule, leftX, modulePos.y);
+                }
+                // rightW is the smallest
+                else
+                {
+                    placeDB->setModuleLocation_2D(onlyModule, rightX, modulePos.y);
+                }
+
+                continue;
+            }
+
+            if (curLRSegment->segModules.size() > windowSize) // number of modules in the segment larger than window size
+            {
+                for (auto startModuleIte = curLRSegment->segModules.begin(); startModuleIte + windowSize <= curLRSegment->segModules.end(); startModuleIte = startModuleIte + (windowSize - overlapSize))
+                {
+                    bool bImprove = solveForBestOrder(startModuleIte, startModuleIte + windowSize);
+                }
+            }
+            else // curLRSegment->segModules.size() > windowSize
+            {
+                bool bImprove = solveForBestOrder(curLRSegment->segModules.begin(), curLRSegment->segModules.end());
+            }
+        }
+    }
 }
 
 void LocalReorderingDP::initializeSegments()
@@ -1051,14 +1109,14 @@ void LocalReorderingDP::initializeSegments()
 
         // Find the corresponding segment of this module, and insert the module id into the segment
         LRSegment compSeg(curModulePos.y, curModulePos.x, curModulePos.x + curModule->getWidth());
-        auto iteFindSegment = lower_bound(lrSegments.begin(), lrSegments.end(), compSeg, compareLRSegment());//!!!! potential bug
+        auto iteFindSegment = lower_bound(lrSegments.begin(), lrSegments.end(), compSeg, compareLRSegment()); //!!!! potential bug
         if (iteFindSegment != lrSegments.end() && iteFindSegment->bottom == curModulePos.y)
         {
             iteFindSegment->addModule(curModule);
         }
         else
         {
-            fprintf(stderr, "Warning: InitFroBBCellSwap(), cannot find legal segment for "
+            fprintf(stderr, "Warning: initializeSegments(), cannot find legal segment for "
                             "module '%s' at (%.2f, %.2f) w: %.2f h: %.2f\n",
                     curModule->name.c_str(),
                     curModulePos.x, curModulePos.y, curModule->getWidth(), curModule->getHeight());
@@ -1079,7 +1137,7 @@ void LocalReorderingDP::initializeSegments()
     // printf( "..s.." );
     fflush(stdout);
     // Sort the module id's by their x coordinates (increasingly)
-    for (auto iteSegment = lrSegments.begin(); iteSegment != lrSegments.end(); iteSegment++)//!! potential bug regarding the lambda expression for comparing Module*
+    for (auto iteSegment = lrSegments.begin(); iteSegment != lrSegments.end(); iteSegment++) //!! potential bug regarding the lambda expression for comparing Module*
     {
         sort(iteSegment->segModules.begin(), iteSegment->segModules.end(), [=](Module *a, Module *b)
              { return float_less(a->getLL_2D().x, b->getLL_2D().x); });
@@ -1087,4 +1145,335 @@ void LocalReorderingDP::initializeSegments()
 
     // printf("done\n");
     fflush(stdout);
+}
+
+bool LocalReorderingDP::solveForBestOrder(vector<Module *>::iterator startModule, vector<Module *>::iterator endModule)
+{
+    // The original solution is the bound of CellSwap
+    LRSolution originalSolution(placeDB);
+
+    // // test code
+    // double left_bound = m_pDB->m_modules[*startModule].m_x;
+    // double right_bound = m_pDB->m_modules[*(endModule - 1)].m_x +
+    //                      m_pDB->m_modules[*(endModule - 1)].m_width;
+    // //@test code
+
+    for (auto itePushItem = startModule; itePushItem != endModule; itePushItem++)
+    {
+        originalSolution.insertedCells.push_back(*itePushItem);
+        originalSolution.xLocations.push_back((*itePushItem)->getLL_2D().x);
+    }
+    originalSolution.recalculateCost();
+
+    LRSolution initialSolution(placeDB);
+    initialSolution.solutionCost = 0;
+    for (auto itePushItem = startModule; itePushItem != endModule; itePushItem++)
+    {
+        initialSolution.uninsertedCells.push_back(*itePushItem);
+    }
+
+    initialSolution.initializeNetModuleCount();
+
+    float minX = FLOAT_MAX;
+    float maxX = -FLOAT_MAX; //!
+    float totalWidth = 0;
+
+    for (auto iteModule = initialSolution.uninsertedCells.begin(); iteModule != initialSolution.uninsertedCells.end(); iteModule++)
+    {
+        Module *curModule = *iteModule;
+        POS_2D curPos = curModule->getLL_2D();
+        minX = min(minX, curPos.x);
+        maxX = max(maxX, curPos.x + curModule->getWidth());
+        totalWidth += curModule->getWidth();
+    }
+
+    // Set currentX
+    initialSolution.currentX = minX;
+
+    // If there is free space in current range, add a white space module
+    if (totalWidth < maxX - minX)
+    {
+        initialSolution.whiteSpaceWidth = maxX - minX - totalWidth;
+        initialSolution.uninsertedCells.push_back(NULL); // pack all free space into one single whitespace
+    }
+
+    LRSolver solver;
+    solver.setBestSolution(&originalSolution);
+    cout << "initial best: " << endl;
+    originalSolution.print();
+    LRSolution bestSol = solver.solve(&initialSolution);
+
+    // Update the module coordinates
+    auto iteUpdate = startModule;
+    auto iteList = bestSol.insertedCells.begin();
+    auto iteLocation = bestSol.xLocations.begin();
+
+    while (iteList != bestSol.insertedCells.end())
+    {
+        if (*iteList != NULL)
+        {
+            Module *curModule = *iteList;
+            POS_2D curPos = curModule->getLL_2D();
+            // Update coordiantes
+            placeDB->setModuleLocation_2D(*iteList, *iteLocation, curPos.y);
+
+            // test code
+            // if (*iteLocation < left_bound - 0.01 ||
+            //     (*iteLocation) + curModule.m_width > right_bound + 0.01)
+            // {
+            //     fprintf(stderr,
+            //             "Warning: Module is placed out of bound in SolveVectorCellSwap()\n");
+            //     fprintf(stderr, "Row bottom %.2f left_bound %.2f right_bound %.2f\n",
+            //             curModule.m_y, left_bound, right_bound);
+            //     fprintf(stderr, "Module %d left %.2f right %.2f\n",
+            //             *iteList, *iteLocation, (*iteLocation) + curModule.m_width);
+
+            //     // fprintf(stderr, "white space width: %.2f list order: ", maxX - minX - totalWidth );
+            //     // for( list<int>::iterator ite = bestSol.m_list.begin() ;
+            //     //	ite != bestSol.m_list.end() ; ite++ )
+            //     //{
+            //     //     fprintf(stderr, "%d ", *ite );
+            //     // }
+            //     // fprintf(stderr, "\n" );
+
+            //     // m_pDB->OutputGnuplotFigureWithZoom( "bb_bug", false, true, true );
+            //     // getchar();
+            // }
+            //@test code
+
+            // Update module order
+            *iteUpdate = *iteList;
+            iteUpdate++;
+        }
+
+        iteList++;
+        iteLocation++;
+    }
+
+    if (bestSol.solutionCost < originalSolution.solutionCost)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+LRSolution LRSolver::solve(LRSolution *initialSolution)
+{
+
+    depthFirstSolve(initialSolution);
+    if (bestSolution == NULL)
+    {
+        // throw domain_error ("no feasible solution found");
+        printf("no feasible solution found");
+        exit(0);
+    }
+    return *bestSolution;
+}
+
+void LRSolver::setBestSolution(LRSolution *curSolution)
+{
+    if (curSolution->isComplete())
+    {
+        bestCost = curSolution->getCost();
+        bestSolution = curSolution->clone(); ///!!!!
+    }
+}
+
+void LRSolver::updateBestSolution(LRSolution *curSolution)
+{
+    if (curSolution->getCost() < bestCost)
+    {
+
+        delete bestSolution;
+        bestSolution = curSolution->clone();
+        bestCost = curSolution->getCost();
+    }
+}
+
+void LRSolver::depthFirstSolve(LRSolution *curSolution)
+{
+    if (curSolution->isComplete())
+    {
+        updateBestSolution(curSolution);
+    }
+    else
+    {
+
+        LRSolutionIterator *i = new LRSolutionIterator(curSolution);
+        while (!i->isDone())
+        {
+            LRSolution *successor = i->createSuccessorSolution();
+
+            // successor.Print();
+            if (successor->getCost() < bestCost) // pruning here, but successor.Bound() is always less than bestObjective????
+            {
+                depthFirstSolve(successor);
+            }
+            else
+            {
+                // cout << "not adopted: " << endl;
+                // successor.Print();
+            }
+
+            delete successor; //!!!
+            i->moduleIterator++;
+        }
+        delete i; //!!!
+    }
+}
+
+LRSolution *LRSolution::clone()
+{
+    return new LRSolution(*this);
+}
+
+void LRSolution::print()
+{
+    cout << "Current: ";
+    printf("(%d) ", uninsertedCells.size());
+    for (auto iteModule = insertedCells.begin(); iteModule != insertedCells.end(); iteModule++)
+    {
+        cout << (*iteModule)->name << " ";
+    }
+    cout << endl;
+
+    cout << "Location: ";
+    for (auto iteModuleLocation = xLocations.begin(); iteModuleLocation != xLocations.end(); iteModuleLocation++)
+    {
+        cout << *iteModuleLocation << " ";
+    }
+
+    cout << endl;
+
+    cout << "Bound: " << solutionCost << endl
+         << endl;
+}
+
+void LRSolution::initializeNetModuleCount()
+{
+    for (auto iteModule = uninsertedCells.begin(); iteModule != uninsertedCells.end(); iteModule++)
+    {
+        if (*iteModule == NULL)
+        {
+            continue;
+        }
+
+        for (auto iteNet = (*iteModule)->nets.begin(); iteNet != (*iteModule)->nets.end(); iteNet++)
+        {
+            if (netModuleCount.count(*iteNet) == 0) // key not found
+            {
+                netModuleCount[*iteNet] = 0;
+            }
+            else
+            {
+                netModuleCount[*iteNet] = netModuleCount[*iteNet] + 1;
+            }
+        }
+    }
+
+    // for (auto iteModule = uninsertedCells.begin(); iteModule != uninsertedCells.end(); iteModule++)
+    // {
+    //     if (*iteModule == NULL)
+    //     {
+    //         continue;
+    //     }
+
+    //     for (auto iteNet = (*iteModule)->nets.begin(); iteNet != (*iteModule)->nets.end(); iteNet++)
+    //     {
+    //         netModuleCount[*iteNet] = netModuleCount[*iteNet] + 1;
+    //     }
+    // }
+}
+
+void LRSolution::recalculateCost()
+{
+    if (isComplete())
+    {
+        std::set<Net *> netSet; //! to avoid repeated calculation of net HPWL
+
+        // Collet all involved net id
+        for (auto iteModule = insertedCells.begin(); iteModule != insertedCells.end(); iteModule++)
+        {
+            // Skip Whitespace
+            if (*iteModule == NULL)
+            {
+                continue;
+            }
+
+            for (auto iteNet = (*iteModule)->nets.begin(); iteNet != (*iteModule)->nets.end(); iteNet++) // module->nets initialized in bookshelf parser
+            {
+                netSet.insert(*iteNet);
+            }
+        }
+
+        // Calculate the involved wirelength
+        solutionCost = 0;
+        for (auto iteNet = netSet.begin(); iteNet != netSet.end(); iteNet++)
+        {
+            solutionCost += (*iteNet)->calcNetHPWL();
+        }
+    }
+}
+
+LRSolution *LRSolutionIterator::createSuccessorSolution()
+{
+    LRSolution *succesorSolution = new LRSolution(pointedSolution->placedb);
+    succesorSolution->whiteSpaceWidth = pointedSolution->whiteSpaceWidth;
+    succesorSolution->xLocations = pointedSolution->xLocations;
+    // succesorSolution->m_pDB = pointedSolution.m_pDB;
+
+    // Push moduleIterator into list
+    succesorSolution->insertedCells = pointedSolution->insertedCells;
+    succesorSolution->insertedCells.push_back(*moduleIterator);
+
+    // Copy uninsertedCells except for moduleIterator
+    for (auto copyIte = pointedSolution->uninsertedCells.begin(); copyIte != pointedSolution->uninsertedCells.end(); copyIte++)
+    {
+        if (copyIte != moduleIterator)
+        {
+            succesorSolution->uninsertedCells.push_back(*copyIte);
+        }
+    }
+
+    Module *curModule = *moduleIterator;
+    POS_2D curPos = curModule->getLL_2D();
+    // Move *moduleIterator module to new location
+    if ((*moduleIterator) != NULL)
+    {
+        pointedSolution->placedb->setModuleLocation_2D(curModule, pointedSolution->currentX, curPos.y);
+        succesorSolution->xLocations.push_back(pointedSolution->currentX);
+
+        // Calculte the new currentX
+        succesorSolution->currentX = pointedSolution->currentX + curModule->getWidth();
+    }
+    else
+    {
+        succesorSolution->xLocations.push_back(pointedSolution->currentX);
+
+        // Calculte the new currentX
+        succesorSolution->currentX = pointedSolution->currentX + pointedSolution->whiteSpaceWidth;
+    }
+
+    // Calculate the new m_bound
+    succesorSolution->solutionCost = pointedSolution->solutionCost;
+    succesorSolution->netModuleCount = pointedSolution->netModuleCount;
+
+    if ((*moduleIterator) != NULL)
+    {
+        for (auto iteNet = curModule->nets.begin(); iteNet != curModule->nets.end(); iteNet++)
+        {
+            succesorSolution->netModuleCount[*iteNet]--;
+
+            // No module in this net is unplaced
+            // Calculate the net length
+            if (succesorSolution->netModuleCount[*iteNet] == 0)
+            {
+                succesorSolution->solutionCost += (*iteNet)->calcNetHPWL();
+            }
+        }
+    }
+    return succesorSolution;
 }

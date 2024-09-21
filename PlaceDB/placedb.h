@@ -80,6 +80,7 @@ public:
     double calcWA_Wirelength_2D(VECTOR_2D);
     double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
+    double calcModuleHPWL(Module*);
     double calcModuleHPWLunsafe(Module *);
     double calcModuleHPWLsafe(Module *);
 

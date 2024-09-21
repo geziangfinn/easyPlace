@@ -6,6 +6,9 @@ class ISMDP;
 class ISMRow;
 class LocalReorderingDP;
 class LRSegment;
+class LRSolution;
+class LRSolutionIterator;
+class LRSolver;
 class GlobalSwapDP;
 
 class DetailedPlacer
@@ -55,6 +58,8 @@ public:
         independentCells = false;
     }
     void initialization();
+
+    //! core function, see grid_run() in ntuplace3
     void ISMSweep(int, int); // int windowSize, int windowOverlap
 
     PlaceDB *placeDB;
@@ -160,10 +165,12 @@ public:
     PlaceDB *placeDB;
     vector<LRSegment> lrSegments;
     void initialization();
-    void solve();
+    //! core function
+    void solve(int, int, int); // int windowSize, int overlapSize, int iterationNumber
 
 private:
     void initializeSegments();
+    bool solveForBestOrder(vector<Module *>::iterator, vector<Module *>::iterator); // todo: implement me
 };
 
 class LRSegment // The placeable interval in each row is called a segment, pretty much like an abacus row. Initialized with placedb->dbSiteRows.intervals
@@ -218,6 +225,89 @@ public:
             return s.bottom < compSeg.bottom;
         }
     }
+};
+
+class LRSolution // one solution (ordering) of cells in a local reorder window
+{
+public:
+    LRSolution(PlaceDB *_db)
+    {
+        Init();
+        placedb = _db;
+    }
+    void Init()
+    {
+        placedb = NULL;
+        solutionCost = 0;
+        insertedCells.clear();
+        uninsertedCells.clear();
+        whiteSpaceWidth = 0;
+        currentX = -1;
+        xLocations.clear();
+        netModuleCount.clear();
+    }
+    // LRSolution( const LRSolution& sol );
+
+    bool isComplete() { return (uninsertedCells.size() == 0); } // insertedCells + uninsertedCells == all modules in the window
+    double getCost()
+    {
+        return solutionCost;
+    }
+    LRSolution *clone();
+    void print();
+    void initializeNetModuleCount();
+    void recalculateCost(); // Recalculate the total wirelength in insertedCells if this solution is complete
+
+    PlaceDB *placedb;
+    double solutionCost;            // For incrementally compute the solution cost, see m_bound in ntuplace3
+    list<Module *> insertedCells;   // inserted modules (locations are determined in this solution)
+    list<Module *> uninsertedCells; // to be inserted modules (locations not determined in this solution, NULL is whitespace)
+    double whiteSpaceWidth;         // The width of the whitespace
+    double currentX;                // left most x coordinate of the whole segment of cells
+
+    list<double> xLocations; // Record the x coordinate of each module in insertedCells
+
+    map<Net *, int> netModuleCount; // number of modules in each related net of the modules in the window
+};
+
+class LRSolutionIterator
+{
+public:
+    LRSolutionIterator(const LRSolution *sol)
+        : pointedSolution(sol)
+    {
+        reset();
+    }
+    void reset()
+    {
+        moduleIterator = pointedSolution->uninsertedCells.begin();
+    }
+    bool isDone()
+    {
+        return moduleIterator == pointedSolution->uninsertedCells.end();
+    }
+    LRSolution *createSuccessorSolution(); 
+
+    list<Module *>::const_iterator moduleIterator; // The iterator points to current uninserted cell in m_sol
+    const LRSolution *pointedSolution;
+};
+
+class LRSolver
+{
+public:
+    LRSolver() : bestSolution(NULL), bestCost(numeric_limits<double>::max()) {}
+    ~LRSolver() { delete bestSolution; }
+
+    LRSolution *bestSolution;
+    double bestCost;
+
+    LRSolution solve(LRSolution *);
+
+    void setBestSolution(LRSolution *);
+
+    void updateBestSolution(LRSolution *);
+
+    void depthFirstSolve(LRSolution *);
 };
 
 class GlobalSwapDP
