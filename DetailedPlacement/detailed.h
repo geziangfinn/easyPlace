@@ -267,7 +267,7 @@ public:
 
     list<double> xLocations; // Record the x coordinate of each module in insertedCells
 
-    map<Net *, int> netModuleCount; // number of modules in each related net of the modules in the window
+    map<int, int> netModuleCount; // number of modules in each related net of the modules in the window, key: net id, do not use Net* as key
 };
 
 class LRSolutionIterator
@@ -286,7 +286,7 @@ public:
     {
         return moduleIterator == pointedSolution->uninsertedCells.end();
     }
-    LRSolution *createSuccessorSolution(); 
+    LRSolution *createSuccessorSolution();
 
     list<Module *>::const_iterator moduleIterator; // The iterator points to current uninserted cell in m_sol
     const LRSolution *pointedSolution;
@@ -295,7 +295,7 @@ public:
 class LRSolver
 {
 public:
-    LRSolver() : bestSolution(NULL), bestCost(numeric_limits<double>::max()) {}
+    LRSolver() : bestSolution(NULL), bestCost(DOUBLE_MAX) {}
     ~LRSolver() { delete bestSolution; }
 
     LRSolution *bestSolution;

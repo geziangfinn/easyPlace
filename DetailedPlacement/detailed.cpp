@@ -2,9 +2,9 @@
 void DetailedPlacer::detailedPlacement()
 {
     initialization();
-    runISM();
+    // runISM();
     // runGlobalSwap();
-    // runLocalReordering();
+    runLocalReordering();
 }
 void DetailedPlacer::initialization()
 {
@@ -106,6 +106,8 @@ void DetailedPlacer::runLocalReordering()
 {
     LocalReorderingDP *lrDetailedPlacer = new LocalReorderingDP(placedb);
     lrDetailedPlacer->initialization();
+    lrDetailedPlacer->solve(3, 2, 1);
+    lrDetailedPlacer->solve(3, 2, 1);
 }
 
 void ISMDP::ISMSweep(int windowSize, int windowOverlap) // a square window, width=height=windowSize
@@ -272,9 +274,9 @@ void ISMDP::ISMRun(CRect window)
             {
                 auto spaceNextToCell = ISMRows[rowID].rowSpaces.upper_bound(curModulePos.x);
                 if (spaceNextToCell != ISMRows[rowID].rowSpaces.end())
-                {
-                    if (spaceNextToCell->first == curModule->getWidth() + curModulePos.x) //?? when would this happen for a legalized design???? if this won't happen, then ISM actually only consider cells with same size?wozhi
-                    {
+                {                                                                          // todo: understand when would the following 'if' happen, in eplace and ntuplace
+                    if (spaceNextToCell->first == curModule->getWidth() + curModulePos.x)  //?? when would this happen for a legalized design???? if this won't happen, then ISM actually only consider cells with same size?
+                    {                                                                      //? this happens only for the last cell of a group of abut cells? we can add the first cell too? what if we adopt chris chu's method: ignore overlap and do a legalization after swaps?
                         if ((curModule->getWidth() + spaceNextToCell->second) >= maxWIDTH) // the space occupied by the module + the space next to the module can hold a module of maximum size(maxWIDTH)
                         {
                             bool connection = false;
@@ -1178,13 +1180,12 @@ bool LocalReorderingDP::solveForBestOrder(vector<Module *>::iterator startModule
     float maxX = -FLOAT_MAX; //!
     float totalWidth = 0;
 
-    for (auto iteModule = initialSolution.uninsertedCells.begin(); iteModule != initialSolution.uninsertedCells.end(); iteModule++)
+    for (Module *uninsertedModule : initialSolution.uninsertedCells)
     {
-        Module *curModule = *iteModule;
-        POS_2D curPos = curModule->getLL_2D();
+        POS_2D curPos = uninsertedModule->getLL_2D();
         minX = min(minX, curPos.x);
-        maxX = max(maxX, curPos.x + curModule->getWidth());
-        totalWidth += curModule->getWidth();
+        maxX = max(maxX, curPos.x + uninsertedModule->getWidth());
+        totalWidth += uninsertedModule->getWidth();
     }
 
     // Set currentX
@@ -1199,7 +1200,7 @@ bool LocalReorderingDP::solveForBestOrder(vector<Module *>::iterator startModule
 
     LRSolver solver;
     solver.setBestSolution(&originalSolution);
-    cout << "initial best: " << endl;
+    // cout << "initial best: " << endl;
     originalSolution.print();
     LRSolution bestSol = solver.solve(&initialSolution);
 
@@ -1216,31 +1217,6 @@ bool LocalReorderingDP::solveForBestOrder(vector<Module *>::iterator startModule
             POS_2D curPos = curModule->getLL_2D();
             // Update coordiantes
             placeDB->setModuleLocation_2D(*iteList, *iteLocation, curPos.y);
-
-            // test code
-            // if (*iteLocation < left_bound - 0.01 ||
-            //     (*iteLocation) + curModule.m_width > right_bound + 0.01)
-            // {
-            //     fprintf(stderr,
-            //             "Warning: Module is placed out of bound in SolveVectorCellSwap()\n");
-            //     fprintf(stderr, "Row bottom %.2f left_bound %.2f right_bound %.2f\n",
-            //             curModule.m_y, left_bound, right_bound);
-            //     fprintf(stderr, "Module %d left %.2f right %.2f\n",
-            //             *iteList, *iteLocation, (*iteLocation) + curModule.m_width);
-
-            //     // fprintf(stderr, "white space width: %.2f list order: ", maxX - minX - totalWidth );
-            //     // for( list<int>::iterator ite = bestSol.m_list.begin() ;
-            //     //	ite != bestSol.m_list.end() ; ite++ )
-            //     //{
-            //     //     fprintf(stderr, "%d ", *ite );
-            //     // }
-            //     // fprintf(stderr, "\n" );
-
-            //     // m_pDB->OutputGnuplotFigureWithZoom( "bb_bug", false, true, true );
-            //     // getchar();
-            // }
-            //@test code
-
             // Update module order
             *iteUpdate = *iteList;
             iteUpdate++;
@@ -1298,6 +1274,8 @@ void LRSolver::depthFirstSolve(LRSolution *curSolution)
     if (curSolution->isComplete())
     {
         updateBestSolution(curSolution);
+        // cout << "one complete solution: " << endl;
+        curSolution->print();
     }
     else
     {
@@ -1310,12 +1288,14 @@ void LRSolver::depthFirstSolve(LRSolution *curSolution)
             // successor.Print();
             if (successor->getCost() < bestCost) // pruning here, but successor.Bound() is always less than bestObjective????
             {
+                // cout << "adopted: " << endl;
+                successor->print();
                 depthFirstSolve(successor);
             }
             else
             {
                 // cout << "not adopted: " << endl;
-                // successor.Print();
+                successor->print();
             }
 
             delete successor; //!!!
@@ -1332,45 +1312,57 @@ LRSolution *LRSolution::clone()
 
 void LRSolution::print()
 {
-    cout << "Current: ";
-    printf("(%d) ", uninsertedCells.size());
-    for (auto iteModule = insertedCells.begin(); iteModule != insertedCells.end(); iteModule++)
+    if (0)
     {
-        cout << (*iteModule)->name << " ";
+        cout << "Current: ";
+        printf("(%d) ", uninsertedCells.size());
+        for (Module *curModule : insertedCells)
+        {
+            if (curModule)
+            {
+                cout << curModule->name << " ";
+            }
+            else
+            {
+                cout << "OOO" << " ";
+            }
+        }
+        cout << endl;
+
+        cout << "Location: ";
+        for (double curModuleLocation : xLocations)
+        {
+            cout << curModuleLocation << " ";
+        }
+
+        cout << endl;
+
+        cout << "Cost: " << solutionCost << endl
+             << endl;
     }
-    cout << endl;
-
-    cout << "Location: ";
-    for (auto iteModuleLocation = xLocations.begin(); iteModuleLocation != xLocations.end(); iteModuleLocation++)
-    {
-        cout << *iteModuleLocation << " ";
-    }
-
-    cout << endl;
-
-    cout << "Bound: " << solutionCost << endl
-         << endl;
 }
 
 void LRSolution::initializeNetModuleCount()
 {
-    for (auto iteModule = uninsertedCells.begin(); iteModule != uninsertedCells.end(); iteModule++)
+    for (Module *uninsertedModule : uninsertedCells)
     {
-        if (*iteModule == NULL)
+        if (uninsertedModule == NULL)
         {
             continue;
         }
 
-        for (auto iteNet = (*iteModule)->nets.begin(); iteNet != (*iteModule)->nets.end(); iteNet++)
+        for (Net *curNet : uninsertedModule->nets)
         {
-            if (netModuleCount.count(*iteNet) == 0) // key not found
-            {
-                netModuleCount[*iteNet] = 0;
-            }
-            else
-            {
-                netModuleCount[*iteNet] = netModuleCount[*iteNet] + 1;
-            }
+            // if (netModuleCount.find(curNet) == netModuleCount.end()) // key not found
+            // {
+            //     //!!!!!! problem: find() fails when using pointer as key
+            //     netModuleCount[curNet] = 0;
+            // }
+            // else
+            // {
+            // cout<<"ffff\n";
+            netModuleCount[curNet->idx] = netModuleCount[curNet->idx] + 1;// netModuleCount[curNet] will be inserted as 0 if not find
+            // }
         }
     }
 
@@ -1395,25 +1387,25 @@ void LRSolution::recalculateCost()
         std::set<Net *> netSet; //! to avoid repeated calculation of net HPWL
 
         // Collet all involved net id
-        for (auto iteModule = insertedCells.begin(); iteModule != insertedCells.end(); iteModule++)
+        for (Module *insertedModule : insertedCells)
         {
             // Skip Whitespace
-            if (*iteModule == NULL)
+            if (insertedModule == NULL)
             {
                 continue;
             }
 
-            for (auto iteNet = (*iteModule)->nets.begin(); iteNet != (*iteModule)->nets.end(); iteNet++) // module->nets initialized in bookshelf parser
+            for (Net *curNet : insertedModule->nets) // module->nets initialized in bookshelf parser
             {
-                netSet.insert(*iteNet);
+                netSet.insert(curNet);
             }
         }
 
         // Calculate the involved wirelength
         solutionCost = 0;
-        for (auto iteNet = netSet.begin(); iteNet != netSet.end(); iteNet++)
+        for (Net *curNet : netSet)
         {
-            solutionCost += (*iteNet)->calcNetHPWL();
+            solutionCost += curNet->calcNetHPWL();
         }
     }
 }
@@ -1426,23 +1418,23 @@ LRSolution *LRSolutionIterator::createSuccessorSolution()
     // succesorSolution->m_pDB = pointedSolution.m_pDB;
 
     // Push moduleIterator into list
+    Module *curModule = *moduleIterator;
     succesorSolution->insertedCells = pointedSolution->insertedCells;
-    succesorSolution->insertedCells.push_back(*moduleIterator);
+    succesorSolution->insertedCells.push_back(curModule);
 
     // Copy uninsertedCells except for moduleIterator
-    for (auto copyIte = pointedSolution->uninsertedCells.begin(); copyIte != pointedSolution->uninsertedCells.end(); copyIte++)
+    for (Module *copyModule : pointedSolution->uninsertedCells)
     {
-        if (copyIte != moduleIterator)
+        if (copyModule != curModule)
         {
-            succesorSolution->uninsertedCells.push_back(*copyIte);
+            succesorSolution->uninsertedCells.push_back(copyModule);
         }
     }
 
-    Module *curModule = *moduleIterator;
-    POS_2D curPos = curModule->getLL_2D();
     // Move *moduleIterator module to new location
-    if ((*moduleIterator) != NULL)
+    if (curModule != NULL)
     {
+        POS_2D curPos = curModule->getLL_2D();
         pointedSolution->placedb->setModuleLocation_2D(curModule, pointedSolution->currentX, curPos.y);
         succesorSolution->xLocations.push_back(pointedSolution->currentX);
 
@@ -1461,17 +1453,23 @@ LRSolution *LRSolutionIterator::createSuccessorSolution()
     succesorSolution->solutionCost = pointedSolution->solutionCost;
     succesorSolution->netModuleCount = pointedSolution->netModuleCount;
 
-    if ((*moduleIterator) != NULL)
+    if (curModule != NULL)
     {
-        for (auto iteNet = curModule->nets.begin(); iteNet != curModule->nets.end(); iteNet++)
+        for (Net *curNet : curModule->nets)
         {
-            succesorSolution->netModuleCount[*iteNet]--;
+            succesorSolution->netModuleCount[curNet->idx]--;
 
             // No module in this net is unplaced
             // Calculate the net length
-            if (succesorSolution->netModuleCount[*iteNet] == 0)
+            assert(succesorSolution->netModuleCount[curNet->idx]>=0);
+            if (succesorSolution->netModuleCount[curNet->idx] == 0)
             {
-                succesorSolution->solutionCost += (*iteNet)->calcNetHPWL();
+                // cout << "added\n";
+                succesorSolution->solutionCost += curNet->calcNetHPWL();
+            }
+            else
+            {
+                // cout << "value is: " << succesorSolution->netModuleCount[curNet] << endl;
             }
         }
     }
