@@ -80,29 +80,30 @@ public:
     double calcWA_Wirelength_2D(VECTOR_2D);
     double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
-    double calcModuleHPWL(Module*);
+    double calcModuleHPWL(Module *);
     double calcModuleHPWLunsafe(Module *);
     double calcModuleHPWLsafe(Module *);
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 
-    void removeBlockedSite();// calculate intervals of siterows considering macros and terminals that block sites, see void RemoveFixedBlockSite() and void RemoveMacroSite() in ntuplace
+    void removeBlockedSite(); // calculate intervals of siterows considering macros and terminals that block sites, see void RemoveFixedBlockSite() and void RemoveMacroSite() in ntuplace
 
     void setChipRegion_2D();
 
     void showDBInfo();
     void showRows();
 
-    void outputBookShelf();
+    void outputBookShelf(string,bool);
+
+    int y2RowIndex(float);
+    bool isConnected(Module *, Module *);
+
+    // void plotCurrentPlacement(string);
+private:
     void outputAUX();
     void outputNodes();
     void outputPL();
     void outputNets();
     void outputSCL();
-
-    int y2RowIndex(float);
-    bool isConnected(Module*,Module*);
-
-    // void plotCurrentPlacement(string);
 };
 #endif

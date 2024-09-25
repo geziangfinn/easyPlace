@@ -295,7 +295,7 @@ double PlaceDB::calcNetBoundPins()
     return HPWL;
 }
 
-double PlaceDB::calcModuleHPWL(Module *curModule)//! assume there are no 2 pins in one module belong to a same net
+double PlaceDB::calcModuleHPWL(Module *curModule) //! assume there are no 2 pins in one module belong to a same net
 {
     double HPWL = 0;
     for (Net *curNet : curModule->nets)
@@ -542,19 +542,23 @@ void PlaceDB::removeBlockedSite() // update intervals
                 double newLeft = ceil((curIntervalIter->start - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
                 double newRight = floor((curIntervalIter->end - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
                 double newIntervalWidth = newRight - newLeft;
-                assert(newIntervalWidth >= siteStep);
+                // assert(newIntervalWidth >= siteStep);
                 if (float_greater(newIntervalWidth, 0.0))
                 {
                     curIntervalIter->start = newLeft;
                     curIntervalIter->end = newRight;
+                    curIntervalIter++;
                 }
-                else if (float_less(newIntervalWidth, 0.0))
+                else
                 {
-                    // newIntervalWidth should >= 0.0
-                    cerr << "sub row new width < 0 when it should not\n";
-                    exit(0);
+                    curIntervalIter = curRowIter->intervals.erase(curIntervalIter);
+                    if (float_less(newIntervalWidth, 0.0))
+                    {
+                        // newIntervalWidth should >= 0.0
+                        cerr << "sub row new width < 0 when it should not\n";
+                        exit(0);
+                    }
                 }
-                curIntervalIter++;
             }
         }
     }
@@ -685,30 +689,27 @@ void PlaceDB::showRows()
     }
 }
 
-void PlaceDB::outputBookShelf()
+void PlaceDB::outputBookShelf(string suffix, bool plOnly)
 {
     string outputFilePath;
-    if (!gArg.GetString("outputPath", &outputFilePath))
-    {
-        outputFilePath = "./";
-    }
-
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
+    if (!gArg.GetString("outputPath", &outputFilePath))
+    {
+        outputFilePath = "./" + benchmarkName + "/";
+    }
 
-    outputFilePath = outputFilePath + "/" + benchmarkName + "/";
+    gArg.Override("outputSuffix", suffix);
 
-    string cmd = "mkdir -p " + outputFilePath;
-    system(cmd.c_str());
-    cout << cmd << endl;
+    if (!plOnly)
+    {
+        outputAUX();
+        outputNodes();
+        outputNets();
+        outputSCL();
+    }
 
-    gArg.Override("outputPath", outputFilePath);
-
-    outputAUX();
-    outputNodes();
-    outputNets();
     outputPL();
-    outputSCL();
 }
 
 void PlaceDB::outputAUX()
@@ -719,8 +720,11 @@ void PlaceDB::outputAUX()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.aux";
+    outputFilePath += "-" + suffix + ".aux";
 
     cout << "Output AUX file:" << outputFilePath << endl;
 
@@ -734,11 +738,11 @@ void PlaceDB::outputAUX()
     }
 
     out << "RowBasedPlacement : "
-        << benchmarkName << "-out.nodes "
-        << benchmarkName << "-out.nets "
-        << benchmarkName << "-out.wts "
-        << benchmarkName << "-out.pl "
-        << benchmarkName << "-out.scl \n\n";
+        << benchmarkName << "-" + suffix + ".nodes "
+        << benchmarkName << "-" + suffix + ".nets "
+        << benchmarkName << "-" + suffix + ".wts "
+        << benchmarkName << "-" + suffix + ".pl "
+        << benchmarkName << "-" + suffix + ".scl \n\n";
 }
 
 void PlaceDB::outputNodes()
@@ -750,8 +754,11 @@ void PlaceDB::outputNodes()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.nodes";
+    outputFilePath += "-" + suffix + ".nodes";
 
     cout << "Output Nodes file:" << outputFilePath << endl;
 
@@ -812,8 +819,12 @@ void PlaceDB::outputPL()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.pl";
+    outputFilePath += "-" + suffix + ".pl";
+
     gArg.Override("outputPL", outputFilePath);
 
     cout << "Output PL file:" << outputFilePath << endl;
@@ -859,8 +870,11 @@ void PlaceDB::outputNets()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.nets";
+    outputFilePath += "-" + suffix + ".nets";
 
     cout << "Output Nets file:" << outputFilePath << endl;
 
@@ -899,8 +913,11 @@ void PlaceDB::outputSCL()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.scl";
+    outputFilePath += "-" + suffix + ".scl";
 
     cout << "Output SCL file:" << outputFilePath << endl;
 

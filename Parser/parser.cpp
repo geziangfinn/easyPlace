@@ -467,13 +467,14 @@ int BookshelfParser::ReadPLFile(string file, PlaceDB &db, bool init)
 	{
 		gArg.GetString("path", &path);
 		path += file;
+		cout << "Initialize module position with file: " << file << "\n";
 	}
 	else
 	{
 		path = file;
+		cout << "Setting module position with file: " << file << "\n";
 	}
 
-	cout << "Initialize position with file: " << file << "\n";
 	ifstream in(path.c_str());
 	if (!in)
 	{

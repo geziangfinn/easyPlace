@@ -2,9 +2,13 @@
 void DetailedPlacer::detailedPlacement()
 {
     initialization();
-    // runISM();
+    for (int i = 0; i < 2; i++)
+    {
+        runLocalReordering();
+        runISM();
+    }
+
     // runGlobalSwap();
-    runLocalReordering();
 }
 void DetailedPlacer::initialization()
 {
@@ -26,7 +30,7 @@ void DetailedPlacer::runISM()
     double detailTimeStart = seconds();
 
     double totalDetailTime = 0;
-    cout << "\nRunning ISM for detailed palcement...\n";
+    cout << "\nRunning ISM for detailed placement...\n";
     flush(cout);
 
     // placedb.SaveBlockLocation();
@@ -34,7 +38,7 @@ void DetailedPlacer::runISM()
     // the following are 3 adjustable parameters
     double timeLimit = 28800; // 28800= 8 hours, adjustable
     double stop = -0.2;       // adjustable parameter
-    double windowSize = 20;   // in row height, adjustable, (20x row height for now)
+    double windowSizeParam = 20;   // in row height, adjustable, (20x row height for now)
     // assert(stop < 0);
 
     totalDetailTime = seconds() - detailTimeStart;
@@ -51,7 +55,7 @@ void DetailedPlacer::runISM()
         // de.MAXMODULE = param.de_MM;
 
         // int run_para1 = param.de_window - i; // de_window = 20, this is window size
-        int windowSize = windowSize - index;
+        int windowSize = windowSizeParam- index;
         if (windowSize < 15)
         {
             windowSize = 15 + index % 5;
@@ -88,7 +92,7 @@ void DetailedPlacer::runISM()
             {
                 ismDetailedPlacer->doubleWindow = true;
                 ismDetailedPlacer->independentCells = true;
-                cout << "Consider independent cells now\n"; // ! start independent
+                cout << "Consider independent cells and enabled double window now\n"; // ! start independent
             }
         }
 
@@ -106,8 +110,12 @@ void DetailedPlacer::runLocalReordering()
 {
     LocalReorderingDP *lrDetailedPlacer = new LocalReorderingDP(placedb);
     lrDetailedPlacer->initialization();
-    lrDetailedPlacer->solve(3, 2, 1);
-    lrDetailedPlacer->solve(3, 2, 1);
+    for (int i = 0; i < 2; i++)
+    {
+        cout << "\nRunning LR for detailed palcement...\n";
+        lrDetailedPlacer->solve(3, 2, 1);
+        // lrDetailedPlacer->solve(3, 2, 1);
+    }
 }
 
 void ISMDP::ISMSweep(int windowSize, int windowOverlap) // a square window, width=height=windowSize
@@ -208,6 +216,7 @@ void ISMDP::ISMRun(CRect window)
 
     while (moduleList.size() != 0)
     {
+        // cout<<"entered\n";
         // slots and modules: assign all modules to all slots, slots.size()==modules.size()?
         vector<POS_2D> slots;
         vector<Module *> modules;
@@ -475,6 +484,7 @@ void ISMDP::ISMRun(CRect window)
         //	}
         //	fplan->SetModuleLocation(modules[i],position[result[i]].x,position[result[i]].y);
         // }
+        // cout<<"lefted\n";
     }
 }
 
@@ -497,7 +507,7 @@ void ISMDP::initializeParams()
 void ISMDP::initializeISMRows()
 {
     double ISMRowLength = placeDB->coreRegion.getWidth();
-    cout << "initialize ISM rows: \n";
+    // cout << "initialize ISM rows: \n";
 
     // 1.create ISMRows
     for (SiteRow curRow : placeDB->dbSiteRows)
@@ -1361,7 +1371,7 @@ void LRSolution::initializeNetModuleCount()
             // else
             // {
             // cout<<"ffff\n";
-            netModuleCount[curNet->idx] = netModuleCount[curNet->idx] + 1;// netModuleCount[curNet] will be inserted as 0 if not find
+            netModuleCount[curNet->idx] = netModuleCount[curNet->idx] + 1; // netModuleCount[curNet] will be inserted as 0 if not find
             // }
         }
     }
@@ -1461,7 +1471,7 @@ LRSolution *LRSolutionIterator::createSuccessorSolution()
 
             // No module in this net is unplaced
             // Calculate the net length
-            assert(succesorSolution->netModuleCount[curNet->idx]>=0);
+            assert(succesorSolution->netModuleCount[curNet->idx] >= 0);
             if (succesorSolution->netModuleCount[curNet->idx] == 0)
             {
                 // cout << "added\n";
