@@ -417,7 +417,7 @@ void ISMDP::ISMRun(CRect window)
                 for (int j = 0; j < deg; j++)
                 {
                     placeDB->setModuleLocation_2D(modules[i], slots[j].x, slots[j].y);
-                    double wl = placeDB->calcModuleHPWLsafe(modules[i]);
+                    double wl = placeDB->calcModuleHPWLfast(modules[i]);
                     // cerr<<" "<<wl;
                     // double wl=0;
                     // for(int k=0;k<(int)fplan->m_modules[modules[i]].m_netsId.size();k++)
@@ -1051,15 +1051,15 @@ void LocalReorderingDP::solve(int windowSize, int overlapSize, int iterationNumb
                 POS_2D modulePos = onlyModule->getLL_2D();
 
                 double originalX = modulePos.x;
-                double originalWirelength = placeDB->calcModuleHPWL(onlyModule);
+                double originalWirelength = placeDB->calcModuleHPWLfast(onlyModule);
 
                 double leftX = curLRSegment->start;
                 placeDB->setModuleLocation_2D(onlyModule, leftX, modulePos.y);
-                double leftWirelength = placeDB->calcModuleHPWL(onlyModule);
+                double leftWirelength = placeDB->calcModuleHPWLfast(onlyModule);
 
                 double rightX = curLRSegment->end - onlyModule->getWidth();
                 placeDB->setModuleLocation_2D(onlyModule, rightX, modulePos.y);
-                double rightWirelength = placeDB->calcModuleHPWL(onlyModule);
+                double rightWirelength = placeDB->calcModuleHPWLfast(onlyModule);
 
                 // OrigW is the smallest
                 if (originalWirelength <= leftWirelength && originalWirelength <= rightWirelength)

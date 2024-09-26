@@ -130,6 +130,10 @@ void PlaceDB::setModuleLocation_2D(Module *module, float x, float y)
     }
 
     module->setLocation_2D(x, y);
+    for (Pin *curPin : module->modulePins)
+    {
+        curPin->calculateAbsolutePos();
+    }
 }
 
 void PlaceDB::setModuleLocation_2D(Module *module, POS_3D pos)
@@ -166,6 +170,10 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     }
 
     module->setCenter_2D(x, y);
+    for (Pin *curPin : module->modulePins)
+    {
+        curPin->calculateAbsolutePos();
+    }
 }
 
 void PlaceDB::setModuleCenter_2D(Module *module, POS_3D pos)
@@ -305,9 +313,49 @@ double PlaceDB::calcModuleHPWL(Module *curModule) //! assume there are no 2 pins
     return HPWL;
 }
 
-double PlaceDB::calcModuleHPWLunsafe(Module *curModule)
+// double PlaceDB::calcModuleHPWLunsafe(Module *curModule)
+// {
+//     //!!!!this function is dangerous and is used for accelerating macro legalization only
+//     double HPWL = 0;
+//     for (Pin *curModulePin : curModule->modulePins)
+//     {
+//         // HPWL += curModulePin->net->calcNetHPWL();
+//         float maxX = -FLOAT_MAX;
+//         float minX = FLOAT_MAX;
+//         // double maxY = DOUBLE_MIN;
+//         float maxY = -FLOAT_MAX;
+//         float minY = FLOAT_MAX;
+//         // double maxZ = DOUBLE_MIN;
+//         float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+//         float minZ = FLOAT_MAX;
+
+//         POS_3D curPos;
+
+//         for (Pin *curPin : curModulePin->net->netPins)
+//         {
+//             //!!! this is why this function is unsafe!!!
+//             curPos = curPin->getAbsolutePos(); //!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
+//             // curPos = curPin->fetchAbsolutePos();
+//             minX = min(minX, curPos.x);
+//             maxX = max(maxX, curPos.x);
+//             minY = min(minY, curPos.y);
+//             maxY = max(maxY, curPos.y);
+//             minZ = min(minZ, curPos.z);
+//             maxZ = max(maxZ, curPos.z);
+//         }
+//         // if (!gArg.CheckExist("3DIC"))
+//         // {
+//         //     //? assert(maxZ == minZ == 0); this causes bug
+//         //     assert(float_equal(maxZ, 0.0));
+//         //     assert(float_equal(minZ, 0.0));
+//         // }
+//         HPWL += ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
+//     }
+//     return HPWL;
+// }
+
+double PlaceDB::calcModuleHPWLfast(Module *curModule)// tested faster than calcModuleHPWL
 {
-    //!!!!this function is dangerous and is used for accelerating macro legalization only
     double HPWL = 0;
     for (Pin *curModulePin : curModule->modulePins)
     {
@@ -325,47 +373,8 @@ double PlaceDB::calcModuleHPWLunsafe(Module *curModule)
 
         for (Pin *curPin : curModulePin->net->netPins)
         {
-            //!!! this is why this function is unsafe!!!
-            curPos = curPin->absolutePos; //!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
-            // curPos = curPin->fetchAbsolutePos();
-            minX = min(minX, curPos.x);
-            maxX = max(maxX, curPos.x);
-            minY = min(minY, curPos.y);
-            maxY = max(maxY, curPos.y);
-            minZ = min(minZ, curPos.z);
-            maxZ = max(maxZ, curPos.z);
-        }
-        // if (!gArg.CheckExist("3DIC"))
-        // {
-        //     //? assert(maxZ == minZ == 0); this causes bug
-        //     assert(float_equal(maxZ, 0.0));
-        //     assert(float_equal(minZ, 0.0));
-        // }
-        HPWL += ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
-    }
-    return HPWL;
-}
-
-double PlaceDB::calcModuleHPWLsafe(Module *curModule)
-{
-    double HPWL = 0;
-    for (Pin *curModulePin : curModule->modulePins)
-    {
-        // HPWL += curModulePin->net->calcNetHPWL();
-        float maxX = -FLOAT_MAX;
-        float minX = FLOAT_MAX;
-        // double maxY = DOUBLE_MIN;
-        float maxY = -FLOAT_MAX;
-        float minY = FLOAT_MAX;
-        // double maxZ = DOUBLE_MIN;
-        float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
-        float minZ = FLOAT_MAX;
-
-        POS_3D curPos;
-
-        for (Pin *curPin : curModulePin->net->netPins)
-        {
-            curPos = curPin->getAbsolutePos();
+            // curPos = curPin->getAbsolutePos();
+            curPos=curPin->absolutePos;
             // curPos = curPin->fetchAbsolutePos();
             minX = min(minX, curPos.x);
             maxX = max(maxX, curPos.x);

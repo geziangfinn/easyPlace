@@ -33,7 +33,8 @@ double Net::calcNetHPWL()
     double HPWL;
     for (Pin *curPin : netPins)
     {
-        curPos = curPin->getAbsolutePos();
+        // curPos = curPin->getAbsolutePos();
+        curPos=curPin->absolutePos;
         curX = curPos.x;
         curY = curPos.y;
         curZ = curPos.z;
@@ -394,15 +395,19 @@ POS_3D Pin::getAbsolutePos()
 {
     // POS_3D absPos;
     // module->calcCenter();//?
-    absolutePos.x = module->getCenter().x + offset.x;
-    absolutePos.y = module->getCenter().y + offset.y;
-    absolutePos.z = module->getCenter().z;
     return absolutePos;
 }
 
-POS_3D Pin::fetchAbsolutePos()
+// POS_3D Pin::fetchAbsolutePos()
+// {
+//     return absolutePos;
+// }
+
+void Pin::calculateAbsolutePos()
 {
-    return absolutePos;
+    absolutePos.x = module->getCenter().x + offset.x;
+    absolutePos.y = module->getCenter().y + offset.y;
+    absolutePos.z = module->getCenter().z;
 }
 
 void Pin::setId(int index)
