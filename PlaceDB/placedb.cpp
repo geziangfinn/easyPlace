@@ -645,7 +645,7 @@ void PlaceDB::showDBInfo()
     printf("\n<<<< DATABASE SUMMARIES >>>>\n\n");
     printf("         Core region: ");
     coreRegion.Print();
-    printf("   Row Height/Number: %.0f / %d (site step %d)\n", commonRowHeight, dbSiteRows.size(), dbSiteRows[0].step);
+    printf("   Row Height/Number: %.0f / %d (site step %f)\n", commonRowHeight, dbSiteRows.size(), dbSiteRows[0].step);
     printf("           Core Area: %.0f (%g)\n", coreArea, coreArea);
     printf("           Cell Area: %.0f (%.2f%%)\n", cellArea, 100.0 * cellArea / coreArea);
     if (macroCount > 0)
