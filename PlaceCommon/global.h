@@ -10,6 +10,9 @@
 #include <cmath>
 #include <algorithm>
 #include <map>
+#include <list>
+#include <set>
+#include <limits.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <iomanip>
@@ -194,9 +197,8 @@ struct VECTOR_3D
     }
     inline float operator*(const VECTOR_3D &rhs) const
     {
-        return  (this->x * rhs.x + this->y * rhs.y + this->z * rhs.z);
+        return (this->x * rhs.x + this->y * rhs.y + this->z * rhs.z);
     }
-
 };
 
 struct POS_3D : public VECTOR_3D
@@ -282,6 +284,11 @@ public:
     float getArea()
     {
         return getHeight() * getWidth();
+    }
+    friend inline std::ostream &operator<<(std::ostream &os, const CRect &rect)
+    {
+        os << "CRect Size: " << rect.ur.x - rect.ll.x << "," << rect.ur.y - rect.ll.y<<endl;
+        return os;
     }
 };
 

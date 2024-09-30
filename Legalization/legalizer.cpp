@@ -1000,7 +1000,7 @@ int SAMacroLegalizer::getMacroOverlapArea(Module *curMacro)
 
 float SAMacroLegalizer::getMacroCost(Module *curMacro, float &HPWL, float &cellCovered, float &macroOverlap)
 {
-    HPWL = placeDB->calcModuleHPWL(curMacro);
+    HPWL = placeDB->calcModuleHPWLfast(curMacro);
     cellCovered = getCellAreaCoveredByMacro(curMacro);
     macroOverlap = getMacroOverlapArea(curMacro);
     return HPWL + cellCovered * miuD + macroOverlap * miuO;
@@ -1044,13 +1044,13 @@ void SAMacroLegalizer::SAperturb()
     float curCost = getMacroCost(chosenOne, curHPWLCost, curCellCoveredCost, curMacroOverlapCost);
 
     placeDB->moveModule_2D(chosenOne, delta);
-    for (Pin *curModulePin : chosenOne->modulePins)
-    {
-        // curModulePin->getAbsolutePos();
-        curModulePin->absolutePos.x = curModulePin->module->getCenter().x + curModulePin->offset.x;
-        curModulePin->absolutePos.y = curModulePin->module->getCenter().y + curModulePin->offset.y;
-        curModulePin->absolutePos.z = curModulePin->module->getCenter().z;
-    }
+    // for (Pin *curModulePin : chosenOne->modulePins)
+    // {
+    //     // curModulePin->getAbsolutePos();
+    //     curModulePin->absolutePos.x = curModulePin->module->getCenter().x + curModulePin->offset.x;
+    //     curModulePin->absolutePos.y = curModulePin->module->getCenter().y + curModulePin->offset.y;
+    //     curModulePin->absolutePos.z = curModulePin->module->getCenter().z;
+    // }
 
     float newHPWLCost;
     float newCellCoveredCost;
@@ -1078,13 +1078,13 @@ void SAMacroLegalizer::SAperturb()
     else
     {
         placeDB->setModuleCenter_2D(chosenOne, curCenter.x, curCenter.y);
-        for (Pin *curModulePin : chosenOne->modulePins)
-        {
-            // curModulePin->getAbsolutePos();
-            curModulePin->absolutePos.x = curModulePin->module->getCenter().x + curModulePin->offset.x;
-            curModulePin->absolutePos.y = curModulePin->module->getCenter().y + curModulePin->offset.y;
-            curModulePin->absolutePos.z = curModulePin->module->getCenter().z;
-        }
+        // for (Pin *curModulePin : chosenOne->modulePins)
+        // {
+        //     // curModulePin->getAbsolutePos();
+        //     curModulePin->absolutePos.x = curModulePin->module->getCenter().x + curModulePin->offset.x;
+        //     curModulePin->absolutePos.y = curModulePin->module->getCenter().y + curModulePin->offset.y;
+        //     curModulePin->absolutePos.z = curModulePin->module->getCenter().z;
+        // }
     }
 }
 

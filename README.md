@@ -1,7 +1,10 @@
 # easyPlace
 Reimplementation of the electrostatic-based VLSI placement algorithm: ePlace and ePlace-MS with clean C++ code. This code is for those who try to understand the electrostatics-based placement. 
 
-Reimplementation of Abacus is applied for internal std cell legalization
+Reimplementation of Abacus is applied for internal std cell legalization.
+
+Independent set matching and local reordering are applied for internal detailed placement.
+
 # How to Build
 To build, go to the root directory.
 ```

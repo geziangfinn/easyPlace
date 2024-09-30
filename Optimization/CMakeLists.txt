@@ -15,6 +15,7 @@ ADD_EXECUTABLE(
     ${PROJECT_SOURCE_DIR}/Optimization/opt.hpp
     ${PROJECT_SOURCE_DIR}/EPlace/eplace.cpp
     ${PROJECT_SOURCE_DIR}/Legalization/legalizer.cpp
+    ${PROJECT_SOURCE_DIR}/DetailedPlacement/detailed.cpp
 
 )
 INCLUDE_DIRECTORIES (
@@ -29,6 +30,7 @@ INCLUDE_DIRECTORIES (
     ${PROJECT_SOURCE_DIR}/EPlace
     ${PROJECT_SOURCE_DIR}/Optimization
     ${PROJECT_SOURCE_DIR}/Legalization
+    ${PROJECT_SOURCE_DIR}/DetailedPlacement
     )
 
 target_link_libraries(ePlace "-lgomp -lpthread -lm -ldl -lX11")

@@ -130,6 +130,15 @@ void PlaceDB::setModuleLocation_2D(Module *module, float x, float y)
     }
 
     module->setLocation_2D(x, y);
+    for (Pin *curPin : module->modulePins)
+    {
+        curPin->calculateAbsolutePos();
+    }
+}
+
+void PlaceDB::setModuleLocation_2D(Module *module, POS_3D pos)
+{
+    setModuleLocation_2D(module, pos.x, pos.y);
 }
 
 void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
@@ -161,6 +170,10 @@ void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
     }
 
     module->setCenter_2D(x, y);
+    for (Pin *curPin : module->modulePins)
+    {
+        curPin->calculateAbsolutePos();
+    }
 }
 
 void PlaceDB::setModuleCenter_2D(Module *module, POS_3D pos)
@@ -290,7 +303,58 @@ double PlaceDB::calcNetBoundPins()
     return HPWL;
 }
 
-double PlaceDB::calcModuleHPWL(Module *curModule)
+double PlaceDB::calcModuleHPWL(Module *curModule) //! assume there are no 2 pins in one module belong to a same net
+{
+    double HPWL = 0;
+    for (Net *curNet : curModule->nets)
+    {
+        HPWL += curNet->calcNetHPWL();
+    }
+    return HPWL;
+}
+
+// double PlaceDB::calcModuleHPWLunsafe(Module *curModule)
+// {
+//     //!!!!this function is dangerous and is used for accelerating macro legalization only
+//     double HPWL = 0;
+//     for (Pin *curModulePin : curModule->modulePins)
+//     {
+//         // HPWL += curModulePin->net->calcNetHPWL();
+//         float maxX = -FLOAT_MAX;
+//         float minX = FLOAT_MAX;
+//         // double maxY = DOUBLE_MIN;
+//         float maxY = -FLOAT_MAX;
+//         float minY = FLOAT_MAX;
+//         // double maxZ = DOUBLE_MIN;
+//         float maxZ = -FLOAT_MAX; // potential bug: double_min >0 so boundPinZmax might be null when all z == 0
+//         float minZ = FLOAT_MAX;
+
+//         POS_3D curPos;
+
+//         for (Pin *curPin : curModulePin->net->netPins)
+//         {
+//             //!!! this is why this function is unsafe!!!
+//             curPos = curPin->getAbsolutePos(); //!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
+//             // curPos = curPin->fetchAbsolutePos();
+//             minX = min(minX, curPos.x);
+//             maxX = max(maxX, curPos.x);
+//             minY = min(minY, curPos.y);
+//             maxY = max(maxY, curPos.y);
+//             minZ = min(minZ, curPos.z);
+//             maxZ = max(maxZ, curPos.z);
+//         }
+//         // if (!gArg.CheckExist("3DIC"))
+//         // {
+//         //     //? assert(maxZ == minZ == 0); this causes bug
+//         //     assert(float_equal(maxZ, 0.0));
+//         //     assert(float_equal(minZ, 0.0));
+//         // }
+//         HPWL += ((maxX - minX) + (maxY - minY) + (maxZ - minZ));
+//     }
+//     return HPWL;
+// }
+
+double PlaceDB::calcModuleHPWLfast(Module *curModule)// tested faster than calcModuleHPWL
 {
     double HPWL = 0;
     for (Pin *curModulePin : curModule->modulePins)
@@ -309,7 +373,8 @@ double PlaceDB::calcModuleHPWL(Module *curModule)
 
         for (Pin *curPin : curModulePin->net->netPins)
         {
-            curPos = curPin->absolutePos; //!!!!!!!! must guarantee that the absoulte pos is up to date!!!!!! this is faster than use fetchAbsolutePos, probably because less function calling overhead?
+            // curPos = curPin->getAbsolutePos();
+            curPos=curPin->absolutePos;
             // curPos = curPin->fetchAbsolutePos();
             minX = min(minX, curPos.x);
             maxX = max(maxX, curPos.x);
@@ -465,7 +530,7 @@ void PlaceDB::removeBlockedSite() // update intervals
             }
         }
     }
-    
+
     //! 3. align intervals to sites after updating intervals, see ntuplace: FixFreeSiteBySiteStep(). Here we need to update the end and start of a site row, so end.x-start.x is an positive integer multiple of site step(site width)
     for (auto curRowIter = dbSiteRows.begin(); curRowIter != dbSiteRows.end(); curRowIter++)
     {
@@ -486,19 +551,23 @@ void PlaceDB::removeBlockedSite() // update intervals
                 double newLeft = ceil((curIntervalIter->start - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
                 double newRight = floor((curIntervalIter->end - coreRegion.ll.x) / siteStep) * siteStep + coreRegion.ll.x;
                 double newIntervalWidth = newRight - newLeft;
-                assert(newIntervalWidth >= siteStep);
+                // assert(newIntervalWidth >= siteStep);
                 if (float_greater(newIntervalWidth, 0.0))
                 {
                     curIntervalIter->start = newLeft;
                     curIntervalIter->end = newRight;
+                    curIntervalIter++;
                 }
-                else if (float_less(newIntervalWidth, 0.0))
+                else
                 {
-                    // newIntervalWidth should >= 0.0
-                    cerr << "sub row new width < 0 when it should not\n";
-                    exit(0);
+                    curIntervalIter = curRowIter->intervals.erase(curIntervalIter);
+                    if (float_less(newIntervalWidth, 0.0))
+                    {
+                        // newIntervalWidth should >= 0.0
+                        cerr << "sub row new width < 0 when it should not\n";
+                        exit(0);
+                    }
                 }
-                curIntervalIter++;
             }
         }
     }
@@ -612,30 +681,44 @@ void PlaceDB::showDBInfo()
     // printf("     Pin-to-Pin HPWL: %.0f (%g)\n", HPWL, HPWL);
 }
 
-void PlaceDB::outputBookShelf()
+void PlaceDB::showRows()
+{
+    for (auto curRowIter = dbSiteRows.begin(); curRowIter != dbSiteRows.end(); curRowIter++)
+    {
+        cout << "\n=====DB ROW SPACE ===\n";
+
+        for (auto iter = curRowIter->intervals.begin(); iter != curRowIter->intervals.end(); iter++)
+        {
+            // modified by Jin 20070727
+            printf("[%.10f,%.10f] ", iter->start, iter->getLength());
+            // cout<<" ["<<iter->first<<","<<iter->second<<"] ";
+            // modified by Jin 20070727
+        }
+        cout << '\n';
+    }
+}
+
+void PlaceDB::outputBookShelf(string suffix, bool plOnly)
 {
     string outputFilePath;
-    if (!gArg.GetString("outputPath", &outputFilePath))
-    {
-        outputFilePath = "./";
-    }
-
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
+    if (!gArg.GetString("outputPath", &outputFilePath))
+    {
+        outputFilePath = "./" + benchmarkName + "/";
+    }
 
-    outputFilePath = outputFilePath + "/" + benchmarkName + "/";
+    gArg.Override("outputSuffix", suffix);
 
-    string cmd = "mkdir -p " + outputFilePath;
-    system(cmd.c_str());
-    cout << cmd << endl;
+    if (!plOnly)
+    {
+        outputAUX();
+        outputNodes();
+        outputNets();
+        outputSCL();
+    }
 
-    gArg.Override("outputPath", outputFilePath);
-
-    outputAUX();
-    outputNodes();
-    outputNets();
     outputPL();
-    outputSCL();
 }
 
 void PlaceDB::outputAUX()
@@ -646,8 +729,11 @@ void PlaceDB::outputAUX()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.aux";
+    outputFilePath += "-" + suffix + ".aux";
 
     cout << "Output AUX file:" << outputFilePath << endl;
 
@@ -661,11 +747,11 @@ void PlaceDB::outputAUX()
     }
 
     out << "RowBasedPlacement : "
-        << benchmarkName << "-out.nodes "
-        << benchmarkName << "-out.nets "
-        << benchmarkName << "-out.wts "
-        << benchmarkName << "-out.pl "
-        << benchmarkName << "-out.scl \n\n";
+        << benchmarkName << "-" + suffix + ".nodes "
+        << benchmarkName << "-" + suffix + ".nets "
+        << benchmarkName << "-" + suffix + ".wts "
+        << benchmarkName << "-" + suffix + ".pl "
+        << benchmarkName << "-" + suffix + ".scl \n\n";
 }
 
 void PlaceDB::outputNodes()
@@ -677,8 +763,11 @@ void PlaceDB::outputNodes()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.nodes";
+    outputFilePath += "-" + suffix + ".nodes";
 
     cout << "Output Nodes file:" << outputFilePath << endl;
 
@@ -739,8 +828,12 @@ void PlaceDB::outputPL()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.pl";
+    outputFilePath += "-" + suffix + ".pl";
+
     gArg.Override("outputPL", outputFilePath);
 
     cout << "Output PL file:" << outputFilePath << endl;
@@ -786,8 +879,11 @@ void PlaceDB::outputNets()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.nets";
+    outputFilePath += "-" + suffix + ".nets";
 
     cout << "Output Nets file:" << outputFilePath << endl;
 
@@ -826,8 +922,11 @@ void PlaceDB::outputSCL()
     string benchmarkName;
     gArg.GetString("benchmarkName", &benchmarkName);
 
+    string suffix;
+    gArg.GetString("outputSuffix", &suffix);
+
     outputFilePath += benchmarkName;
-    outputFilePath += "-out.scl";
+    outputFilePath += "-" + suffix + ".scl";
 
     cout << "Output SCL file:" << outputFilePath << endl;
 
@@ -956,4 +1055,50 @@ void PlaceDB::addNoise()
         pos.y += disy(gen);
         node->setCenter_2D(pos.x, pos.y);
     }
+}
+
+void PlaceDB::saveNodesLocation()
+{
+    int nodesCount = dbNodes.size();
+    nodesLocationRegister.resize(nodesCount);
+
+    for (int i = 0; i < nodesCount; i++)
+    {
+        nodesLocationRegister[i] = dbNodes[i]->getLocation();
+    }
+}
+
+void PlaceDB::loadNodesLocation()
+{
+    int nodesCount = dbNodes.size();
+    assert(nodesLocationRegister.size() == nodesCount);
+    for (int i = 0; i < nodesCount; i++)
+    {
+        setModuleLocation_2D(dbNodes[i], nodesLocationRegister[i]);
+    }
+}
+
+int PlaceDB::y2RowIndex(float y)
+{
+    int index = (int)((y - coreRegion.ll.y) / commonRowHeight); //!!!!!!! assume coreRegion.ll.y == the bottom of the first row, check setCoreRegion()
+
+    assert(index >= 0);
+    assert(index < dbSiteRows.size());
+
+    return index;
+}
+
+bool PlaceDB::isConnected(Module *module1, Module *module2)
+{
+    for (Net *module1Net : module1->nets)
+    {
+        for (Net *module2Net : module2->nets)
+        {
+            if (module1Net == module2Net)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }

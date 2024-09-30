@@ -99,10 +99,11 @@ public:
     Module *module;
     Net *net;
     POS_2D offset;
-    POS_3D absolutePos;
+
     int direction; // 0 output  1 input  -1 not-define
     POS_3D getAbsolutePos();
-    POS_3D fetchAbsolutePos(); // currently for mLG only
+    // POS_3D fetchAbsolutePos(); // currently for mLG only
+    void calculateAbsolutePos();
 
     VECTOR_3D eMin_WA;               // e^[(Xmin-Xi)/gamma] in WA model (X/Y/Z)
     VECTOR_3D eMax_WA;               // e^[(Xi-Xmax)/gamma] in WA model (X/Y/Z)
@@ -118,6 +119,9 @@ public:
     void setNet(Net *);
     void setModule(Module *);
     void setDirection(int);
+
+// private:
+    POS_3D absolutePos;
 };
 
 class Module
@@ -318,6 +322,10 @@ public:
     inline void SetZero()
     {
         start = end = 0.0; //!! 0.0!!!!
+    }
+    float getLength()
+    {
+        return end - start;
     }
     float start;
     float end;
