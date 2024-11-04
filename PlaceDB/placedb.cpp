@@ -144,7 +144,7 @@ void PlaceDB::setModuleLocation_2D(Module *module, POS_3D pos)
 void PlaceDB::setModuleCenter_2D(Module *module, float x, float y)
 {
     //? use high precision comparison functions in global.h??
-    // todo: check if x,y are legal(inside the chip)
+    //  check if x,y are legal(inside the chip)
     if (!module->isFixed)
     {
         if (x - 0.5 * module->width < coreRegion.ll.x)
@@ -354,7 +354,7 @@ double PlaceDB::calcModuleHPWL(Module *curModule) //! assume there are no 2 pins
 //     return HPWL;
 // }
 
-double PlaceDB::calcModuleHPWLfast(Module *curModule)// tested faster than calcModuleHPWL
+double PlaceDB::calcModuleHPWLfast(Module *curModule) // tested faster than calcModuleHPWL
 {
     double HPWL = 0;
     for (Pin *curModulePin : curModule->modulePins)
@@ -374,7 +374,7 @@ double PlaceDB::calcModuleHPWLfast(Module *curModule)// tested faster than calcM
         for (Pin *curPin : curModulePin->net->netPins)
         {
             // curPos = curPin->getAbsolutePos();
-            curPos=curPin->absolutePos;
+            curPos = curPin->absolutePos;
             // curPos = curPin->fetchAbsolutePos();
             minX = min(minX, curPos.x);
             maxX = max(maxX, curPos.x);
@@ -1076,6 +1076,80 @@ void PlaceDB::loadNodesLocation()
     {
         setModuleLocation_2D(dbNodes[i], nodesLocationRegister[i]);
     }
+}
+
+CRect PlaceDB::getOptimialRegion(Module *module)
+{
+    // see the description of the 'optimal region' in the paper: An efficient and effective detailed placement algorithm
+    //? Return a rectangle which has integer width and height. And its height is an integer multiple of the row height while its width align with row site
+    //? is it necessary to align?
+    vector<float> Xs;
+    vector<float> Ys;
+
+    for (Net *curNet : module->nets)
+    {
+        double maxX = -DOUBLE_MAX;
+        double minX = DOUBLE_MAX;
+
+        double maxY = -DOUBLE_MAX;
+        double minY = DOUBLE_MAX;
+
+        double curX;
+        double curY;
+
+        POS_3D curPos;
+        double HPWL;
+
+        for (Pin *curPin : curNet->netPins)
+        {
+            if (curPin->module == module)
+            {
+                continue;
+            }
+            curPos = curPin->absolutePos;
+            curX = curPos.x;
+            curY = curPos.y;
+
+            minX = min(minX, curX);
+            maxX = max(maxX, curX);
+            minY = min(minY, curY);
+            maxY = max(maxY, curY);
+        }
+        Xs.push_back(minX);
+        Xs.push_back(maxX);
+        Ys.push_back(minY);
+        Ys.push_back(maxY);
+    }
+
+    // find medians of Xs and Ys.
+    // ! The size of Xs and Ys should be even.
+    float left, right, bottom, up;
+
+    // left = getKth(Xs, Xs.size() / 2 - 1); // left and right boundary of the optimal region
+    // right = getKth(Xs, Xs.size() / 2);
+
+    // bottom = getKth(Ys, Ys.size() / 2 - 1);
+    // up = getKth(Ys, Ys.size() / 2);
+
+    // or
+
+    sort(Xs.begin(), Xs.end());
+    sort(Ys.begin(), Ys.end());
+
+    left = Xs[Xs.size() / 2 - 1]; // left and right boundary of the optimal region
+    right = Xs[Xs.size() / 2];
+
+    bottom = Ys[Ys.size() / 2 - 1];
+    up = Ys[Ys.size() / 2];
+
+    // create CRect and return
+
+    CRect result;
+    result.ll.x = left;
+    result.ll.y = bottom;
+    result.ur.x = right;
+    result.ur.y = up;
+    return result;
 }
 
 int PlaceDB::y2RowIndex(float y)

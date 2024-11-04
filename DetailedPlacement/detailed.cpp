@@ -6,9 +6,8 @@ void DetailedPlacer::detailedPlacement()
     {
         runLocalReordering();
         runISM();
+        runGlobalSwap();
     }
-
-    // runGlobalSwap();
 }
 void DetailedPlacer::initialization()
 {
@@ -36,9 +35,9 @@ void DetailedPlacer::runISM()
     // placedb.SaveBlockLocation();
 
     // the following are 3 adjustable parameters
-    double timeLimit = 28800; // 28800= 8 hours, adjustable
-    double stop = -0.2;       // adjustable parameter
-    double windowSizeParam = 20;   // in row height, adjustable, (20x row height for now)
+    double timeLimit = 28800;    // 28800= 8 hours, adjustable
+    double stop = -0.2;          // adjustable parameter
+    double windowSizeParam = 20; // in row height, adjustable, (20x row height for now)
     // assert(stop < 0);
 
     totalDetailTime = seconds() - detailTimeStart;
@@ -55,7 +54,7 @@ void DetailedPlacer::runISM()
         // de.MAXMODULE = param.de_MM;
 
         // int run_para1 = param.de_window - i; // de_window = 20, this is window size
-        int windowSize = windowSizeParam- index;
+        int windowSize = windowSizeParam - index;
         if (windowSize < 15)
         {
             windowSize = 15 + index % 5;
@@ -106,13 +105,28 @@ void DetailedPlacer::runISM()
     cout << "ISM total runtime:" << totalTime << "\n";
 }
 
+void DetailedPlacer::runGlobalSwap()
+{
+    double GStime;
+    GlobalSwapDP *GSDetailedPlacer = new GlobalSwapDP(placedb);
+    GSDetailedPlacer->initialization();
+    cout << "\nRunning Global Swap for detailed placement...\n";
+    time_start(&GStime);
+    for (int i = 0; i < 2; i++)
+    {
+        GSDetailedPlacer->solve();
+    }
+    time_end(&GStime);
+    cout << "\nGlobal Swap finished in " << GStime << " seconds\n";
+}
+
 void DetailedPlacer::runLocalReordering()
 {
     LocalReorderingDP *lrDetailedPlacer = new LocalReorderingDP(placedb);
     lrDetailedPlacer->initialization();
     for (int i = 0; i < 2; i++)
     {
-        cout << "\nRunning LR for detailed palcement...\n";
+        cout << "\nRunning LR for detailed placement...\n";
         lrDetailedPlacer->solve(3, 2, 1);
         // lrDetailedPlacer->solve(3, 2, 1);
     }
@@ -269,7 +283,7 @@ void ISMDP::ISMRun(CRect window)
                 if (connection == false)
                 {
                     modules.push_back(curModule);
-                    POS_2D slot;
+                    POS_2D slot; //?? no need to copy here, delete later
                     slot.x = curModulePos.x;
                     slot.y = curModulePos.y;
                     slots.push_back(slot);
@@ -439,7 +453,8 @@ void ISMDP::ISMRun(CRect window)
                     matrix.put(i, j, wl);
                 }
                 // fplan->SetModuleLocation(modules[i],ox,oy);
-                placeDB->setModuleLocation_2D(modules[i], bestPos.x, bestPos.y); // is it necessary to set now? 2024.8.27
+                placeDB->setModuleLocation_2D(modules[i], bestPos.x, bestPos.y); //? is it necessary to set now? 2024.8.27
+                                                                                 //? 2024.11.1 setting now would affect the bestWirelength calculation of the following cells?
             }
         }
 
@@ -638,7 +653,7 @@ bool ISMRow::removeTail(double x, double width)
         return false; // x<all empty site's start point
 
     spaceIter--;
-    if ((spaceIter->second - (x - spaceIter->first)) < width) // (iter->first+iter->second)-(x+w) < 0, x+w is not convered by the empty indexed by iter
+    if ((spaceIter->second - (x - spaceIter->first)) < width) // (iter->first+iter->second)-(x+w) < 0, x+w is not convered by the empty indexed by iter, tail doesn't exist, no need to remove
         return false;
 
     double l2 = x - spaceIter->first;
@@ -649,10 +664,10 @@ bool ISMRow::removeTail(double x, double width)
         {
             rowSpaces[x + width] = (spaceIter->first + spaceIter->second) - (x + width);
         }
-        rowSpaces.erase(spaceIter->first); //? why
+        rowSpaces.erase(spaceIter->first); // tail is removed, space after tail is inserted.
     }
     else
-    { // what is this situation????
+    { // what is this situation????: a long space is divided by the tail, and we remove tail (so the tail is no longer empty)
         if ((x + width) < (spaceIter->first + spaceIter->second))
         {
 
@@ -1484,4 +1499,264 @@ LRSolution *LRSolutionIterator::createSuccessorSolution()
         }
     }
     return succesorSolution;
+}
+
+void GlobalSwapDP::solve()
+{
+    //! this function follows the algorithm introduced in the paper: An efficient and effective detailed placement algorithm
+    int successCount = 0;
+    for (Module *curCell : placeDB->dbNodes)
+    {
+        if (curCell->isMacro)
+        {
+            continue;
+        }
+        float curCellWidth = curCell->getWidth();
+        POS_2D curCellPos = curCell->getLL_2D();
+
+        vector<POS_2D> candidateEmptySlots;
+        vector<POS_2D> candidateModuleSlots;
+
+        // 1. determine search region
+        CRect searchRegion = placeDB->getOptimialRegion(curCell);
+        // possible extension: intersection of optimalRegion and other wanted regions (for example, regions with lower overflow or congestion).
+
+        // boundary check
+        if (float_greaterorequal(searchRegion.ll.y, placeDB->coreRegion.ur.y) || float_lessorequal(searchRegion.ur.y, placeDB->coreRegion.ll.y) || float_greaterorequal(searchRegion.ll.x, placeDB->coreRegion.ur.x) || float_lessorequal(searchRegion.ur.x, placeDB->coreRegion.ll.x))
+        {
+            continue;
+        }
+
+        searchRegion.ll.x = max(searchRegion.ll.x, placeDB->coreRegion.ll.x);
+        searchRegion.ll.y = max(searchRegion.ll.y, placeDB->coreRegion.ll.y);
+        searchRegion.ur.x = min(searchRegion.ur.x, placeDB->coreRegion.ur.x);
+        searchRegion.ur.y = min(searchRegion.ur.y, placeDB->coreRegion.ur.y);
+
+        // align search region to avoid bugs
+        // 1.1 align to sites
+        double siteStep = placeDB->dbSiteRows.front().step;
+        //? when use ceil for left and floor for right, all small search regions are ignored.
+        //? How about ceil for right and floor for left, so we always have a search region?
+        double newLeft = floor((searchRegion.ll.x - placeDB->coreRegion.ll.x) / siteStep) * siteStep + placeDB->coreRegion.ll.x;
+        double newRight = ceil((searchRegion.ur.x - placeDB->coreRegion.ll.x) / siteStep) * siteStep + placeDB->coreRegion.ll.x;
+        searchRegion.ll.x = newLeft;
+        searchRegion.ur.x = newRight;
+
+        // 1.2 align to placement rows
+        double newBottom = floor((searchRegion.ll.y - placeDB->coreRegion.ll.y) / placeDB->commonRowHeight) * placeDB->commonRowHeight + placeDB->coreRegion.ll.y;
+        double newTop = ceil((searchRegion.ur.y - placeDB->coreRegion.ll.y) / placeDB->commonRowHeight) * placeDB->commonRowHeight + placeDB->coreRegion.ll.y;
+        searchRegion.ll.y = newBottom;
+        searchRegion.ur.y = newTop;
+        // watch out the search region is a point or a line
+        if (float_equal(searchRegion.ll.x, searchRegion.ur.x) || float_equal(searchRegion.ll.y, searchRegion.ur.y))
+        {
+            continue;
+        }
+
+        //! watch out when the cell is already in the region
+        if (searchRegion.inside(curCellPos))
+        {
+            continue;
+        }
+
+        // 2. find empty slots and exchangable cells in the search region
+        //  !similar to find slots and cells in ISM in implementation, need structures like ISMrows to manage spaces.
+        //  currently we use a simplified version of the implementation introduced in the paper, no penalty, only exchange with cells with same size or empty slots
+        //  'In the actual implementation, to saveruntime, for aselected cell,
+        //  we do not pick the cell with the best benefit in its optimal region.
+        //  Instead, we pick the first good cell that can give us certain benefit.'
+        // cout << "ll: " << searchRegion.ll.y << endl;
+        int startRowIndex = max(placeDB->y2RowIndex(searchRegion.ll.y), 0); // lowest row
+        double endRowBottom = min(double(searchRegion.ur.y), placeDB->coreRegion.ur.y - placeDB->commonRowHeight);
+        // cout << "ur: " << searchRegion.ur.y << endl;
+        int endRowIndex = placeDB->y2RowIndex(endRowBottom); // highest row
+        assert(endRowIndex >= startRowIndex);
+
+        // 2.1 find empty slots
+        int emptySlotCount = 0;
+        for (int i = startRowIndex; i < endRowIndex; i++)
+        {
+            for (auto curRowSpaceIter = GSRows[i].rowSpaces.lower_bound(searchRegion.ll.x);
+                 curRowSpaceIter != GSRows[i].rowSpaces.lower_bound(searchRegion.ur.x);
+                 curRowSpaceIter++)
+            {
+                int slotCount = (int)(curRowSpaceIter->second / curCellWidth);
+                for (int j = 0; j < slotCount; j++)
+                {
+                    emptySlotCount++;
+                    if (emptySlotCount > maxSlotCount)
+                    {
+                        break;
+                    }
+                    POS_2D slot;
+                    slot.x = curRowSpaceIter->first + j * curCellWidth;
+                    slot.y = GSRows[i].ll.y;
+
+                    assert(placeDB->coreRegion.ll.y + i * placeDB->commonRowHeight == GSRows[i].ll.y);
+
+                    candidateEmptySlots.push_back(slot);
+                }
+            }
+        }
+
+        // 2.2 find cells for swap
+        multimap<double, Module *> moduleMap; // use multimap for auto sorting (by module width)
+        vector<Module *> candidateModules;    // correspond with the vector candidateModuleSlots
+        if (emptySlotCount < maxSlotCount)
+        {
+            // build module size map, with all modules in the window
+            for (int i = startRowIndex; i <= endRowIndex; i++) // i< endRowIndex in ntuplace
+            {
+                auto startModule = GSRows[i].rowModules.lower_bound(searchRegion.ll.x); //! rowModules initialized in initializeISMRows()
+                auto endModule = GSRows[i].rowModules.lower_bound(searchRegion.ur.x);
+
+                for (auto curModuleIter = startModule; curModuleIter != endModule; curModuleIter++)
+                {
+                    // if (curModuleIter->second->getHeight() == placeDB->commonRowHeight)
+                    if (!(curModuleIter->second->isMacro)) // macros are ignored
+                    {
+                        //! adding cells in the window with same sizes
+                        float curModuleWidth = curModuleIter->second->getWidth();
+                        if (float_equal(curCellWidth, curModuleWidth))
+                        {
+                            moduleMap.insert(pair<double, Module *>(curModuleWidth, curModuleIter->second));
+                        }
+                    }
+                }
+            }
+
+            //! moduleList stores ALL modules in current window(windows), sorted by module width, decreaingly (sorted increasingly in moduleMap)
+            int swapModuleCount = 0;
+
+            for (auto rIter = moduleMap.rbegin(); rIter != moduleMap.rend(); rIter++)
+            {
+                swapModuleCount++;
+                if (emptySlotCount + swapModuleCount > maxSlotCount)
+                {
+                    break;
+                }
+                candidateModules.push_back(rIter->second);
+                candidateModuleSlots.push_back(rIter->second->getLL_2D());
+            }
+        }
+
+        // 3. exchange with empty slots if there are any, or exchange with a cell that give us certain benefit
+        bool insertedFlag = false; // true if we find a candidate slot for current cell
+        // cout << "CP2\n";
+        int curCellRowID = placeDB->y2RowIndex(curCellPos.y); //! curCellPos is the original cell position before inserting
+        GSRows[curCellRowID].removeModule(curCell);           // remove from curCellPos, not the potential new location
+        double oldWL = placeDB->calcModuleHPWLfast(curCell);  // looking for the first one that gives us benefits, not the best one
+
+        // 3.1 try to insert cell into the empty
+        for (POS_2D curSlot : candidateEmptySlots)
+        {
+            placeDB->setModuleLocation_2D(curCell, curSlot.x, curSlot.y);
+            if (oldWL > placeDB->calcModuleHPWLfast(curCell))
+            {
+                insertedFlag = true;
+                // cout << "CP3\n";
+                int curSlotRowID = placeDB->y2RowIndex(curSlot.y);
+                // update GSRows, only need insertModule and removeModule? remove tail actually means removespace, however it seems we only need to remove space of tails, so its called remove tail?
+                GSRows[curSlotRowID].insertModule(curSlot.x, curCell);
+                break; // looking for the first one that gives us benefits, not the best one
+            }
+        }
+
+        if (!insertedFlag)
+        {
+            // 3.2 try to swap cells
+            for (int i = 0; i < candidateModules.size(); i++)
+            {
+                double oldWL2 = oldWL + placeDB->calcModuleHPWLfast(candidateModules[i]); // save old wirelength
+                // cout << "CP4\n";
+                int curSlotRowID = placeDB->y2RowIndex(candidateModuleSlots[i].y);
+                GSRows[curSlotRowID].removeModule(candidateModules[i]); // remove from original location
+                // swap
+                placeDB->setModuleLocation_2D(curCell, candidateModuleSlots[i].x, candidateModuleSlots[i].y);
+                placeDB->setModuleLocation_2D(candidateModules[i], curCellPos.x, curCellPos.y);
+
+                if (oldWL2 > placeDB->calcModuleHPWLfast(curCell) + placeDB->calcModuleHPWLfast(candidateModules[i]))
+                {
+                    insertedFlag = true;
+                    GSRows[curSlotRowID].insertModule(candidateModuleSlots[i].x, curCell);
+                    GSRows[curCellRowID].insertModule(curCellPos.x, candidateModules[i]);
+                    break;
+                }
+                else
+                {
+                    GSRows[curSlotRowID].insertModule(candidateModuleSlots[i].x, candidateModules[i]);
+                    placeDB->setModuleLocation_2D(candidateModules[i], candidateModuleSlots[i].x, candidateModuleSlots[i].y); //! put it back!
+                }
+            }
+        }
+
+        if (!insertedFlag)
+        {
+            // no candidate is selected
+            placeDB->setModuleLocation_2D(curCell, curCellPos.x, curCellPos.y);
+            GSRows[curCellRowID].insertModule(curCellPos.x, curCell);
+        }
+        else
+        {
+            successCount++;
+        }
+    }
+    cout << "Found position for " << successCount << " among all " << placeDB->dbNodes.size() - placeDB->dbMacroCount << " cells\n";
+
+    // todo: when does global swap stop? Just iterate through all cells? record current HPWL decrease and decide stop criteria
+}
+
+void GlobalSwapDP::initialization()
+{
+    initializeParams();
+    initializeGSRows();
+}
+
+void GlobalSwapDP::initializeParams()
+{
+    maxSlotCount = 30; // affect runtime
+}
+
+void GlobalSwapDP::initializeGSRows()
+{
+    //! same as ISMDP::initializeISMRows()
+    double ISMRowLength = placeDB->coreRegion.getWidth();
+    // cout << "initialize ISM rows: \n";
+
+    // 1.create ISMRows
+    for (SiteRow curRow : placeDB->dbSiteRows)
+    {
+        ISMRow newRow(placeDB->coreRegion.ll.x, curRow.bottom, ISMRowLength);
+        for (Interval curInterval : curRow.intervals)
+        {
+            // cout<<"father: "<<curInterval.start<<" "<<curInterval.getLength()<<endl;
+            newRow.rowSpaces[curInterval.start] = curInterval.getLength();
+            // cout<<"son: "<<newRow.rowSpaces[curInterval.start]<<endl;
+        }
+        GSRows.push_back(newRow);
+    }
+
+    // 2. insert cells to ISMRows
+    for (Module *curModule : placeDB->dbNodes) // all nodes, macros and cells
+    {
+
+        int coveredRowCount = 1;
+        POS_2D curModulePos = curModule->getLL_2D();
+        float moduleHeight = curModule->getHeight();
+        if (moduleHeight > placeDB->commonRowHeight) //?? macro included???
+        {
+            coveredRowCount = (int)(moduleHeight / placeDB->commonRowHeight);
+            if (placeDB->commonRowHeight * coveredRowCount < moduleHeight)
+            {
+                coveredRowCount++; // for macros
+            }
+        }
+
+        int pos = placeDB->y2RowIndex(curModulePos.y);
+
+        for (int i = 0; i < coveredRowCount; i++)
+        {
+            GSRows[pos + i].insertModule(curModulePos.x, curModule);
+        }
+    }
 }
