@@ -3,7 +3,7 @@ Reimplementation of the electrostatic-based VLSI placement algorithm: ePlace and
 
 Reimplementation of Abacus is applied for internal std cell legalization.
 
-Independent set matching and local reordering are applied for internal detailed placement.
+Independent set matching, local reordering and global swap are applied for internal detailed placement.
 
 # How to Build
 To build, go to the root directory.
@@ -34,11 +34,19 @@ sample command:
 * -addNoise: add random noise before mGP
 
 # References
+### Global Placement:
 * [ePlace](https://dl.acm.org/doi/10.1145/2699873)
 * [ePlace-MS](https://ieeexplore.ieee.org/document/7008518)
 * [RePlAce](https://ieeexplore.ieee.org/document/8418790)
 * [Xplace](https://github.com/cuhk-eda/Xplace)
+
+### Legalization:
 * [Abacus](https://dl.acm.org/doi/10.1145/1353629.1353640)
+
+### Detailed placement techniques:
+* [NTUplace3](https://ieeexplore.ieee.org/document/4544855)
+* [ABCDPlace](https://ieeexplore.ieee.org/document/8982049)
+* [FastPlace](https://ieeexplore.ieee.org/document/1560039)
 
 # Authors
 Ziang Ge and Yikai Liu, supervised by Prof. [Pingqiang Zhou](https://faculty.sist.shanghaitech.edu.cn/faculty/zhoupq/home.html) at [ShanghaiTech University](https://www.shanghaitech.edu.cn/)
