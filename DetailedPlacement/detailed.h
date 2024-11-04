@@ -75,7 +75,7 @@ private:
     void ISMRun(CRect);
 };
 
-class ISMRow
+class ISMRow // used for ISM and Global Swap
 {
 public:
     ISMRow()
@@ -312,5 +312,28 @@ public:
 
 class GlobalSwapDP
 {
+public:
+    GlobalSwapDP()
+    {
+        Init();
+    }
+    GlobalSwapDP(PlaceDB *_db)
+    {
+        Init();
+        placeDB = _db;
+    }
+    void Init()
+    {
+        placeDB = NULL;
+    }
+    void solve();
+    PlaceDB *placeDB;
+    vector<ISMRow> GSRows;
+    int maxSlotCount; // max number of candidate slots chosen from the search region
+    void initialization();
+
+private:
+    void initializeParams();
+    void initializeGSRows();
 };
 #endif

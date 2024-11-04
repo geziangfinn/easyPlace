@@ -285,9 +285,13 @@ public:
     {
         return getHeight() * getWidth();
     }
+    bool inside(POS_2D &point)
+    {
+        return (point.x >= ll.x) && (point.x <= ur.x) && (point.y >= ll.y) && (point.y <= ur.y);
+    }
     friend inline std::ostream &operator<<(std::ostream &os, const CRect &rect)
     {
-        os << "CRect Size: " << rect.ur.x - rect.ll.x << "," << rect.ur.y - rect.ll.y<<endl;
+        os << "CRect Size: " << rect.ur.x - rect.ll.x << "," << rect.ur.y - rect.ll.y << endl;
         return os;
     }
 };
@@ -493,5 +497,49 @@ inline double getOverlapArea_2D(POS_2D ll1, POS_2D ur1, POS_2D ll2, POS_2D ur2)
 inline float L2NORM(VECTOR_3D a)
 {
     return sqrt(float_square(a.x) + float_square(a.y) + float_square(a.z));
+}
+
+inline int partion(vector<float> &array, int begin, int end)
+{
+    int start = begin;
+    int key = array[begin];
+    while (begin < end)
+    {
+        while (begin < end && array[end] >= key)
+        {
+            end--;
+        }
+        while (begin < end && array[begin] <= key)
+        {
+            begin++;
+        }
+        swap(array[begin], array[end]);
+    }
+    swap(array[start], array[begin]);
+    return begin;
+}
+
+inline float getKth(vector<float> &array, int K) // return the Kth smallest number in an array (start from 0)
+{
+    int left = 0;
+    int right = array.size() - 1;
+    int index = -1;
+    while (index != K)
+    {
+        index = partion(array, left, right);
+        if (index > K)
+        {
+            right = index - 1;
+        }
+        else if (index < K)
+        {
+            left = index + 1;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return array[index];
 }
 #endif

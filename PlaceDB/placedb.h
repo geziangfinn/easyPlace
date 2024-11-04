@@ -73,6 +73,7 @@ public:
     void addNoise();
     void saveNodesLocation();
     void loadNodesLocation();
+    CRect getOptimialRegion(Module *); // for legalized results, normally called in detailed placement
 
     POS_3D getValidModuleCenter_2D(Module *module, float x, float y);
 
@@ -93,7 +94,7 @@ public:
     void showDBInfo();
     void showRows();
 
-    void outputBookShelf(string,bool);
+    void outputBookShelf(string, bool);
 
     int y2RowIndex(float);
     bool isConnected(Module *, Module *);
